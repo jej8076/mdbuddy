@@ -291,7 +291,6 @@ class _MarkdownEditorState extends State<MarkdownEditor> {
                   controller: _controller,
                   maxLines: null,
                   decoration: InputDecoration(
-                    hintText: 'Row Enter markdown text here...',
                     border: InputBorder.none,
                     filled: false, // 배경색 비활성화 (Container에서 처리)
                   ),

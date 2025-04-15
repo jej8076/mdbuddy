@@ -1,3 +1,5 @@
+import 'dart:math';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'dart:async';
@@ -51,9 +53,11 @@ class _LineStyledTextFieldState extends State<LineStyledTextField> implements Te
   bool _showCursor = false;
   Timer? _cursorTimer;
   int _cursorPosition = 0;
+  int? _selectionStart = 0;
+  int? _selectionEnd = 0;
+  bool _isShiftPressed = false;
   GlobalKey _canvasKey = GlobalKey();
   TextInputConnection? _textInputConnection;
-  String _composingText = '';
   TextEditingValue _currentValue = TextEditingValue.empty;
 
   @override
@@ -318,8 +322,7 @@ class _LineStyledTextFieldState extends State<LineStyledTextField> implements Te
   void _handleBackspace() {
     if (_cursorPosition > 0 && widget.controller.text.isNotEmpty) {
       final text = widget.controller.text;
-      final newText = text.substring(0, _cursorPosition - 1) +
-          text.substring(_cursorPosition);
+      final newText = text.substring(0, _cursorPosition - 1) + text.substring(_cursorPosition);
 
       widget.controller.text = newText;
       setState(() {
@@ -343,6 +346,27 @@ class _LineStyledTextFieldState extends State<LineStyledTextField> implements Te
     return KeyboardListener(
       focusNode: FocusNode(skipTraversal: true),
       onKeyEvent: (KeyEvent event) {
+
+        if(event is KeyDownEvent){
+          if (event.logicalKey == LogicalKeyboardKey.shiftLeft || event.logicalKey == LogicalKeyboardKey.shiftRight) {
+            setState(() {
+              _isShiftPressed = true;
+              print("isShift:${_isShiftPressed}, _cursorPosition : ${_cursorPosition}, _selectionStart: ${_selectionStart}, _selectionEnd: ${_selectionEnd}");
+            });
+          }
+        }
+
+        if(event is KeyUpEvent){
+          if (event.logicalKey == LogicalKeyboardKey.shiftLeft || event.logicalKey == LogicalKeyboardKey.shiftRight) {
+            setState(() {
+              _isShiftPressed = false;
+              _selectionStart = null;
+              _selectionEnd = null;
+              print("isShift:${_isShiftPressed}, _cursorPosition : ${_cursorPosition}, _selectionStart: ${_selectionStart}, _selectionEnd: ${_selectionEnd}");
+            });
+          }
+        }
+
         if (event is KeyDownEvent) {
           if (event.logicalKey == LogicalKeyboardKey.backspace) {
             _handleBackspace();
@@ -350,17 +374,37 @@ class _LineStyledTextFieldState extends State<LineStyledTextField> implements Te
           }
 
           if(event.logicalKey == LogicalKeyboardKey.arrowLeft){
-            print('_cursorPosition :: ${_cursorPosition}');
             setState(() {
+              if(_isShiftPressed && _selectionStart == null){
+                _selectionStart = _cursorPosition;
+              }
               _cursorPosition--;
+              if(_isShiftPressed && _selectionStart != null){
+                _selectionEnd = _cursorPosition;
+              }else{
+                _selectionStart = null;
+                _selectionEnd = null;
+              }
+              print("isShift:${_isShiftPressed}, _cursorPosition : ${_cursorPosition}, _selectionStart: ${_selectionStart}, _selectionEnd: ${_selectionEnd}");
             });
           }
 
           if(event.logicalKey == LogicalKeyboardKey.arrowRight){
             setState(() {
+              if(_isShiftPressed && _selectionStart == null) {
+                _selectionStart = _cursorPosition;
+              }
               _cursorPosition++;
+              if(_isShiftPressed && _selectionStart != null){
+                _selectionEnd = _cursorPosition;
+              }else{
+                _selectionStart = null;
+                _selectionEnd = null;
+              }
+              print("isShift:${_isShiftPressed}, _cursorPosition : ${_cursorPosition}, _selectionStart: ${_selectionStart}, _selectionEnd: ${_selectionEnd}");
             });
           }
+
         }
       },
       child: Focus(
@@ -377,6 +421,8 @@ class _LineStyledTextFieldState extends State<LineStyledTextField> implements Te
               showCursor: _showCursor && _focusNode.hasFocus,
               cursorPosition: _cursorPosition,
               padding: widget.padding,
+              selectionStart: _selectionStart, // 선택 시작 위치 전달
+              selectionEnd: _selectionEnd,   // 선택 끝 위치 전달
             ),
             child: Container(
               width: double.infinity,
@@ -398,6 +444,8 @@ class LineStyleTextPainter extends CustomPainter {
   final bool showCursor;
   final int cursorPosition;
   final EdgeInsets padding;
+  final int? selectionStart;
+  final int? selectionEnd;
 
   LineStyleTextPainter({
     required this.text,
@@ -407,6 +455,8 @@ class LineStyleTextPainter extends CustomPainter {
     this.showCursor = false,
     this.cursorPosition = 0,
     this.padding = const EdgeInsets.all(8.0),
+    this.selectionStart,
+    this.selectionEnd,
   });
 
   @override
@@ -460,8 +510,12 @@ class LineStyleTextPainter extends CustomPainter {
     for (int i = 0; i < lines.length; i++) {
       // 이 줄의 스타일 가져오기 (스타일이 줄 수보다 적을 경우 순환)
       final lineStyle = lineStyles[i % lineStyles.length];
+      final line = lines[i];
+      final lineLength = line.length;
+      final lineStartIndex = runningLength;
+      final lineEndIndex = runningLength + lineLength;
 
-      final textSpan = TextSpan(
+      TextSpan currentLineSpan = TextSpan(
         text: lines[i],
         style: TextStyle(
           color: lineStyle.color,
@@ -473,8 +527,59 @@ class LineStyleTextPainter extends CustomPainter {
         ),
       );
 
+      if (selectionStart != null && selectionEnd != null) {
+        final selectionStartInLineRaw = selectionStart! - lineStartIndex;
+        final selectionEndInLineRaw = selectionEnd! - lineStartIndex;
+
+        final selectionStartInLine = max(0, min(lineLength, min(selectionStartInLineRaw, selectionEndInLineRaw)));
+        final selectionEndInLine = max(0, min(lineLength, max(selectionStartInLineRaw, selectionEndInLineRaw)));
+
+        if (selectionStartInLine < selectionEndInLine) {
+          final beforeSelection = line.substring(0, selectionStartInLine);
+          final selectedText = line.substring(selectionStartInLine, selectionEndInLine);
+          final afterSelection = line.substring(selectionEndInLine);
+
+          currentLineSpan = TextSpan(
+            style: TextStyle(fontSize: lineStyle.fontSize),
+            children: <TextSpan>[
+              TextSpan(
+                text: beforeSelection,
+                style: TextStyle(
+                  color: lineStyle.color,
+                  fontWeight: lineStyle.fontWeight,
+                  fontFamily: lineStyle.fontFamily,
+                  fontStyle: lineStyle.fontStyle,
+                  decoration: lineStyle.decoration,
+                ),
+              ),
+              TextSpan(
+                text: selectedText,
+                style: TextStyle(
+                  color: lineStyle.color,
+                  fontWeight: lineStyle.fontWeight,
+                  fontFamily: lineStyle.fontFamily,
+                  fontStyle: lineStyle.fontStyle,
+                  decoration: lineStyle.decoration,
+                  background: (Paint()..color = Colors.blue.withOpacity(0.3)),
+                ),
+              ),
+              TextSpan(
+                text: afterSelection,
+                style: TextStyle(
+                  color: lineStyle.color,
+                  fontWeight: lineStyle.fontWeight,
+                  fontFamily: lineStyle.fontFamily,
+                  fontStyle: lineStyle.fontStyle,
+                  decoration: lineStyle.decoration,
+                ),
+              ),
+            ],
+          );
+        }
+      }
+
       final textPainter = TextPainter(
-        text: textSpan,
+        text: currentLineSpan,
         textDirection: TextDirection.ltr,
       );
 
@@ -482,8 +587,8 @@ class LineStyleTextPainter extends CustomPainter {
       textPainter.paint(canvas, Offset(padding.left, y));
 
       // 커서 위치가 이 줄에 있는지 확인
-      final lineLength = lines[i].length;
-      final lineEndIndex = runningLength + lineLength;
+      // final lineLength = lines[i].length;
+      // final lineEndIndex = runningLength + lineLength;
 
       if (cursorPosition >= runningLength && cursorPosition <= lineEndIndex) {
         // 이 줄 내에서의 커서 위치

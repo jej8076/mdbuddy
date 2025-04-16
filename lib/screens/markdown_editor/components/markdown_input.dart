@@ -1,4 +1,5 @@
 import 'dart:math';
+import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -306,134 +307,264 @@ class _LineStyledTextFieldState extends State<LineStyledTextField> implements Te
     return rowNumber;
   }
 
-  void _handleArrowUp() {
-    if (_cursorPosition > 0 && widget.controller.text.isNotEmpty) {
-      final text = widget.controller.text;
-
-      int nowLine = getCurrentRow(text, _cursorPosition);
-
-      setState(() {
-        _cursorPosition--;
-      });
-
-    }
-  }
-
   void _handleBackspace() {
-    if (_cursorPosition > 0 && widget.controller.text.isNotEmpty) {
-      final text = widget.controller.text;
-      final newText = text.substring(0, _cursorPosition - 1) + text.substring(_cursorPosition);
+    if (widget.controller.text.isNotEmpty) {
+      if (_selectionStart != null && _selectionEnd != null) {
+        // 선택 영역이 있을 경우
+        final startIndex = _selectionStart! < _selectionEnd! ? _selectionStart! : _selectionEnd!;
+        final endIndex = _selectionStart! > _selectionEnd! ? _selectionStart! : _selectionEnd!;
 
-      widget.controller.text = newText;
-      setState(() {
-        _cursorPosition--;
-      });
+        final text = widget.controller.text;
+        final newText = text.substring(0, startIndex) + text.substring(endIndex);
+        final newCursorPosition = startIndex;
 
-      // 텍스트 입력 연결 업데이트
-      if (_textInputConnection != null && _textInputConnection!.attached) {
-        _textInputConnection!.setEditingState(
-          TextEditingValue(
-            text: newText,
-            selection: TextSelection.collapsed(offset: _cursorPosition),
-          ),
-        );
+        widget.controller.text = newText;
+        setState(() {
+          _cursorPosition = newCursorPosition;
+          _selectionStart = null;
+          _selectionEnd = null;
+        });
+
+        // 텍스트 입력 연결 업데이트
+        if (_textInputConnection != null && _textInputConnection!.attached) {
+          _textInputConnection!.setEditingState(
+            TextEditingValue(
+              text: newText,
+              selection: TextSelection.collapsed(offset: newCursorPosition),
+            ),
+          );
+        }
+      } else if (_cursorPosition > 0) {
+        // 선택 영역이 없을 경우 (기존 백스페이스 기능 유지)
+        final text = widget.controller.text;
+        final newText = text.substring(0, _cursorPosition - 1) + text.substring(_cursorPosition);
+        final newCursorPosition = _cursorPosition - 1;
+
+        widget.controller.text = newText;
+        setState(() {
+          _cursorPosition = newCursorPosition;
+        });
+
+        // 텍스트 입력 연결 업데이트
+        if (_textInputConnection != null && _textInputConnection!.attached) {
+          _textInputConnection!.setEditingState(
+            TextEditingValue(
+              text: newText,
+              selection: TextSelection.collapsed(offset: newCursorPosition),
+            ),
+          );
+        }
       }
     }
   }
 
+  void _handleSpacebar() {
+    if (widget.controller.text.isEmpty) {
+      // 텍스트가 비어있을 경우, 첫 번째 공백 추가 및 커서 이동
+      widget.controller.text = " ";
+      setState(() {
+        _cursorPosition = 1;
+      });
+      if (_textInputConnection != null && _textInputConnection!.attached) {
+        _textInputConnection!.setEditingState(
+          TextEditingValue(
+            text: " ",
+            selection: TextSelection.collapsed(offset: 1),
+          ),
+        );
+      }
+      return;
+    }
+
+    final text = widget.controller.text;
+    final newText = "${text.substring(0, _cursorPosition)} ${text.substring(_cursorPosition)}";
+
+    widget.controller.text = newText;
+    setState(() {
+      _cursorPosition++;
+    });
+
+    // 텍스트 입력 연결 업데이트
+    if (_textInputConnection != null && _textInputConnection!.attached) {
+      _textInputConnection!.setEditingState(
+        TextEditingValue(
+          text: newText,
+          selection: TextSelection.collapsed(offset: _cursorPosition),
+        ),
+      );
+    }
+  }
+
+  void _handleShiftKeyState(LogicalKeyboardKey key, bool isPressed) {
+    if (key == LogicalKeyboardKey.shiftLeft || key == LogicalKeyboardKey.shiftRight) {
+      setState(() {
+        _isShiftPressed = isPressed;
+      });
+    }
+  }
+
+  void _handleLeftOrRightKey(LogicalKeyboardKey key) {
+    setState(() {
+      final isMovingLeft = key == LogicalKeyboardKey.arrowLeft;
+      final moveOffset = isMovingLeft ? -1 : 1;
+
+      if (_isShiftPressed) {
+        if (_selectionStart == null) {
+          _selectionStart = _cursorPosition;
+        }
+        _cursorPosition += moveOffset;
+        _selectionEnd = _cursorPosition;
+      } else {
+        _cursorPosition += moveOffset;
+        _selectionStart = null;
+        _selectionEnd = null;
+      }
+      print("_cursorPosition: $_cursorPosition, _selectionStart: $_selectionStart, _selectionEnd: $_selectionEnd");
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
-    return KeyboardListener(
-      focusNode: FocusNode(skipTraversal: true),
-      onKeyEvent: (KeyEvent event) {
-
-        if(event is KeyDownEvent){
-          if (event.logicalKey == LogicalKeyboardKey.shiftLeft || event.logicalKey == LogicalKeyboardKey.shiftRight) {
-            setState(() {
-              _isShiftPressed = true;
-              print("isShift:${_isShiftPressed}, _cursorPosition : ${_cursorPosition}, _selectionStart: ${_selectionStart}, _selectionEnd: ${_selectionEnd}");
-            });
-          }
-        }
-
-        if(event is KeyUpEvent){
-          if (event.logicalKey == LogicalKeyboardKey.shiftLeft || event.logicalKey == LogicalKeyboardKey.shiftRight) {
-            setState(() {
-              _isShiftPressed = false;
-              _selectionStart = null;
-              _selectionEnd = null;
-              print("isShift:${_isShiftPressed}, _cursorPosition : ${_cursorPosition}, _selectionStart: ${_selectionStart}, _selectionEnd: ${_selectionEnd}");
-            });
-          }
-        }
-
+    return Focus(
+      focusNode: _focusNode,
+      onKeyEvent: (FocusNode node, KeyEvent event) {
+        // shift 상태 처리
         if (event is KeyDownEvent) {
-          if (event.logicalKey == LogicalKeyboardKey.backspace) {
-            _handleBackspace();
-            return;
-          }
-
-          if(event.logicalKey == LogicalKeyboardKey.arrowLeft){
-            setState(() {
-              if(_isShiftPressed && _selectionStart == null){
-                _selectionStart = _cursorPosition;
-              }
-              _cursorPosition--;
-              if(_isShiftPressed && _selectionStart != null){
-                _selectionEnd = _cursorPosition;
-              }else{
-                _selectionStart = null;
-                _selectionEnd = null;
-              }
-              print("isShift:${_isShiftPressed}, _cursorPosition : ${_cursorPosition}, _selectionStart: ${_selectionStart}, _selectionEnd: ${_selectionEnd}");
-            });
-          }
-
-          if(event.logicalKey == LogicalKeyboardKey.arrowRight){
-            setState(() {
-              if(_isShiftPressed && _selectionStart == null) {
-                _selectionStart = _cursorPosition;
-              }
-              _cursorPosition++;
-              if(_isShiftPressed && _selectionStart != null){
-                _selectionEnd = _cursorPosition;
-              }else{
-                _selectionStart = null;
-                _selectionEnd = null;
-              }
-              print("isShift:${_isShiftPressed}, _cursorPosition : ${_cursorPosition}, _selectionStart: ${_selectionStart}, _selectionEnd: ${_selectionEnd}");
-            });
-          }
-
+          _handleShiftKeyState(event.logicalKey, true);
         }
+        if (event is KeyUpEvent) {
+          _handleShiftKeyState(event.logicalKey, false);
+        }
+
+        // keydown 이벤트만 처리
+        if (event is! KeyDownEvent) {
+          return KeyEventResult.ignored;
+        }
+
+        // 특수 키 처리
+        if (event.logicalKey == LogicalKeyboardKey.backspace) {
+          _handleBackspace();
+          return KeyEventResult.handled; // 이벤트 처리 완료로 표시
+        }
+
+        if (event.logicalKey == LogicalKeyboardKey.space) {
+          _handleSpacebar();
+          return KeyEventResult.handled;
+        }
+
+        if (event.logicalKey == LogicalKeyboardKey.arrowLeft ||
+            event.logicalKey == LogicalKeyboardKey.arrowRight) {
+          _handleLeftOrRightKey(event.logicalKey);
+          return KeyEventResult.handled;
+        }
+        //
+        // // 문자 입력 처리 - 중요: 여기서 기본 입력을 차단
+        // if (event.character != null && event.character!.isNotEmpty) {
+        //   _handleTextInput(event.character!);
+        //   return KeyEventResult.handled; // 시스템의 기본 처리 방지
+        // }
+
+        return KeyEventResult.ignored; // 다른 키는 무시
       },
-      child: Focus(
-        focusNode: _focusNode,
-        child: GestureDetector(
-          onTapDown: _handleTapDown,
-          child: CustomPaint(
-            key: _canvasKey,
-            painter: LineStyleTextPainter(
-              text: widget.controller.text,
-              lineStyles: widget.lineStyles,
-              hintText: widget.hintText,
-              hasFocus: _focusNode.hasFocus,
-              showCursor: _showCursor && _focusNode.hasFocus,
-              cursorPosition: _cursorPosition,
-              padding: widget.padding,
-              selectionStart: _selectionStart, // 선택 시작 위치 전달
-              selectionEnd: _selectionEnd,   // 선택 끝 위치 전달
-            ),
-            child: Container(
-              width: double.infinity,
-              height: double.infinity,
-              color: Colors.transparent,
-            ),
+      child: GestureDetector(
+        onTapDown: _handleTapDown,
+        child: CustomPaint(
+          key: _canvasKey,
+          painter: LineStyleTextPainter(
+            text: widget.controller.text,
+            lineStyles: widget.lineStyles,
+            hintText: widget.hintText,
+            hasFocus: _focusNode.hasFocus,
+            showCursor: _showCursor && _focusNode.hasFocus,
+            cursorPosition: _cursorPosition,
+            padding: widget.padding,
+            selectionStart: _selectionStart, // 선택 시작 위치 전달
+            selectionEnd: _selectionEnd,   // 선택 끝 위치 전달
+          ),
+          child: Container(
+            width: double.infinity,
+            height: double.infinity,
+            color: Colors.transparent,
           ),
         ),
       ),
     );
   }
+
+
+  // @override
+  // Widget build(BuildContext context) {
+  //   return KeyboardListener(
+  //     focusNode: FocusNode(skipTraversal: true),
+  //     onKeyEvent: (KeyEvent event) {
+  //
+  //       // shift down
+  //       if (event is KeyDownEvent) {
+  //         _handleShiftKeyState(event.logicalKey, true);
+  //       }
+  //
+  //       // shift up
+  //       if (event is KeyUpEvent) {
+  //         _handleShiftKeyState(event.logicalKey, false);
+  //       }
+  //
+  //       // keydown 이벤트만 인식되도록 함
+  //       if (event is! KeyDownEvent) {
+  //         return;
+  //       }
+  //
+  //       // 글자 입력
+  //       if (event.character != null) {
+  //         _handleTextInput(event.character!);
+  //         return KeyEventResult.handled;
+  //       }
+  //
+  //       // backspace
+  //       if (event.logicalKey == LogicalKeyboardKey.backspace) {
+  //         _handleBackspace();
+  //         return;
+  //       }
+  //
+  //       // space
+  //       if (event.logicalKey == LogicalKeyboardKey.space) {
+  //         _handleSpacebar();
+  //         return;
+  //       }
+  //
+  //       // left or right
+  //       if (event.logicalKey == LogicalKeyboardKey.arrowLeft || event.logicalKey == LogicalKeyboardKey.arrowRight) {
+  //         _handleLeftOrRightKey(event.logicalKey);
+  //         return;
+  //       }
+  //
+  //     },
+  //     child: Focus(
+  //       focusNode: _focusNode,
+  //       child: GestureDetector(
+  //         onTapDown: _handleTapDown,
+  //         child: CustomPaint(
+  //           key: _canvasKey,
+  //           painter: LineStyleTextPainter(
+  //             text: widget.controller.text,
+  //             lineStyles: widget.lineStyles,
+  //             hintText: widget.hintText,
+  //             hasFocus: _focusNode.hasFocus,
+  //             showCursor: _showCursor && _focusNode.hasFocus,
+  //             cursorPosition: _cursorPosition,
+  //             padding: widget.padding,
+  //             selectionStart: _selectionStart, // 선택 시작 위치 전달
+  //             selectionEnd: _selectionEnd,   // 선택 끝 위치 전달
+  //           ),
+  //           child: Container(
+  //             width: double.infinity,
+  //             height: double.infinity,
+  //             color: Colors.transparent,
+  //           ),
+  //         ),
+  //       ),
+  //     ),
+  //   );
+  // }
 }
 
 class LineStyleTextPainter extends CustomPainter {

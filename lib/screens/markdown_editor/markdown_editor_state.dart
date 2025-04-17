@@ -1,4 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:mdbuddy/bloc/markdown_line_style_bloc.dart';
+import 'package:mdbuddy/utils/markdown_line_style_provider.dart';
 import 'package:mdbuddy/screens/markdown_editor/martdown_editor_screen.dart';
 
 import '../../services/file_service.dart';
@@ -15,23 +18,6 @@ class MarkdownEditorState extends State<MarkdownEditor> {
   String? _currentFilePath; // 현재 열려있는 파일 경로를 저장
   final KeyHandler _keyHandler = KeyHandler();
   final FileService _fileService = FileService();
-
-  final List<LineStyle> _markdownStyles = [
-    // 기본 텍스트 스타일
-    LineStyle(color: Colors.black, fontWeight: FontWeight.normal, fontSize: 16),
-    // 헤더 스타일 (H1)
-    LineStyle(color: Colors.blue.shade800, fontWeight: FontWeight.bold, fontSize: 24),
-    // 헤더 스타일 (H2)
-    LineStyle(color: Colors.blue.shade700, fontWeight: FontWeight.bold, fontSize: 20),
-    // 코드 블록 스타일
-    LineStyle(color: Colors.grey.shade700, fontWeight: FontWeight.w400, fontSize: 15, fontFamily: 'Courier'),
-  ];
-
-  void _updateMarkdown() {
-    setState(() {
-      _markdownData = _controller.text;
-    });
-  }
 
   void _toggleLayout() {
     setState(() {
@@ -109,56 +95,41 @@ class MarkdownEditorState extends State<MarkdownEditor> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: EditorAppBar(
-        pickFile: _pickFile,
-        saveFile: _saveFile,
-        saveAsFile: _saveAsFile,
-        toggleLayout: _toggleLayout,
-        toggleViewerMode: _toggleViewerMode,
-        isVertical: _isVertical,
-        isViewerMode: _isViewerMode,
-      ),
-      body: _isViewerMode
-          ? MarkdownPreview(markdownData: _markdownData)
-          : _isVertical
-          ? Column(
-        children: [
-          Expanded(
-            child: LineStyledTextField(
-              controller: _controller,
-              lineStyles: _markdownStyles,
-              onChanged: (text) {
-                // 텍스트 변경 처리
-                setState(() {});
-              },
-              hintText: '마크다운을 입력하세요...',
-            ),
-          ),
-          Divider(height: 2, thickness: 2),
-          Expanded(
-            child: MarkdownPreview(markdownData: _markdownData),
-          ),
-        ],
-      )
-          : Row(
-        children: [
-          Expanded(
-            child: LineStyledTextField(
-              controller: _controller,
-              lineStyles: _markdownStyles,
-              onChanged: (text) {
-                // 텍스트 변경 처리
-                setState(() {});
-              },
-              hintText: '마크다운을 입력하세요...',
-            ),
-          ),
-          VerticalDivider(width: 2, thickness: 2),
-          Expanded(
-            child: MarkdownPreview(markdownData: _markdownData),
-          ),
-        ],
+    return BlocProvider<MarkdownLineStyleBloc>(
+      create: (context) => MarkdownLineStyleBloc(), // Bloc 인스턴스 생성
+      child: Scaffold(
+        appBar: EditorAppBar(
+          pickFile: _pickFile,
+          saveFile: _saveFile,
+          saveAsFile: _saveAsFile,
+          toggleLayout: _toggleLayout,
+          toggleViewerMode: _toggleViewerMode,
+          isVertical: _isVertical,
+          isViewerMode: _isViewerMode,
+        ),
+        body: BlocBuilder<MarkdownLineStyleBloc, MarkdownLineStyleState>(
+          builder: (context, state) {
+            final lineStyles = state.lineStyles;
+            return Column(
+              children: [
+                Expanded(
+                  child: LineStyledTextField(
+                    controller: _controller,
+                    lineStyles: lineStyles,
+                    onChanged: (text) {
+                      setState(() {});
+                    },
+                    hintText: '마크다운을 입력하세요...',
+                  ),
+                ),
+                // Divider(height: 2, thickness: 2),
+                // Expanded(
+                //   child: MarkdownPreview(markdownData: _markdownData),
+                // ),
+              ],
+            );
+          },
+        ),
       ),
     );
   }

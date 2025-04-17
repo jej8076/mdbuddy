@@ -1,27 +1,12 @@
 import 'dart:math';
-import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'dart:async';
 
-class LineStyle {
-  final Color color;
-  final FontWeight fontWeight;
-  final double fontSize;
-  final String? fontFamily;
-  final FontStyle fontStyle;
-  final TextDecoration decoration;
-
-  LineStyle({
-    required this.color,
-    required this.fontWeight,
-    required this.fontSize,
-    this.fontFamily,
-    this.fontStyle = FontStyle.normal,
-    this.decoration = TextDecoration.none,
-  });
-}
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:mdbuddy/bloc/markdown_line_style_bloc.dart';
+import 'package:mdbuddy/utils/markdown_line_style_provider.dart';
 
 class LineStyledTextField extends StatefulWidget {
   final TextEditingController controller;
@@ -102,15 +87,33 @@ class _LineStyledTextFieldState extends State<LineStyledTextField> implements Te
   }
 
   void _onTextChange() {
-    if (widget.onChanged != null) {
-      widget.onChanged!(widget.controller.text);
+    if (widget.onChanged == null) {
+      return;
     }
+    widget.onChanged!(widget.controller.text);
+
+    if(widget.controller.text.contains("# ")){
+      // int cursorRowIndex = getCursorRowIndex();
+      List<int>? target = getTargetStringRowIndex("# ");
+
+      if(target == null){
+        return;
+      }
+
+      for(int t in target){
+        BlocProvider.of<MarkdownLineStyleBloc>(context).add(
+          AddLineStyleEvent(style: LineStyleProvider.getLineStyle(MarkdownLineStyles.h1), index: t),
+        );
+      }
+
+    }
+
     setState(() {});
   }
 
   void _startCursorBlink() {
     _cursorTimer?.cancel();
-    _cursorTimer = Timer.periodic(Duration(milliseconds: 500), (timer) {
+    _cursorTimer = Timer.periodic(Duration(milliseconds: 400), (timer) {
       if (mounted) {
         setState(() {
           _showCursor = !_showCursor;
@@ -293,111 +296,66 @@ class _LineStyledTextFieldState extends State<LineStyledTextField> implements Te
   }
 
   // 현재 커서가 몇번째 줄에 있는 지 확인하는 함수
-  int getCurrentRow(String text, int cursorPosition) {
-    if (cursorPosition < 0 || cursorPosition > text.length) {
+  int getCursorRowIndex() {
+    if (_cursorPosition < 0 || _cursorPosition > widget.controller.text.length) {
       return -1; // 유효하지 않은 커서 위치
     }
 
-    int rowNumber = 1;
-    for (int i = 0; i < cursorPosition; i++) {
-      if (text[i] == '\n') {
+    int rowNumber = 0;
+    for (int i = 0; i < _cursorPosition; i++) {
+      if (widget.controller.text[i] == '\n') {
         rowNumber++;
       }
     }
     return rowNumber;
   }
 
+  // 입력된 String이 몇번째 줄에 있는 지 확인하는 함수
+  List<int>? getTargetStringRowIndex(String? s) {
+    if (s == null || widget.controller.text == "") {
+      return null;
+    }
+
+    List<String> lines = widget.controller.text.split("\n");
+
+    List<int> result = [];
+    for (int i = 0; i < lines.length; i++) {
+      String line = lines[i];
+      if (line.contains(s)) {
+        result.add(i);
+      }
+    }
+    return result;
+  }
+
   void _handleBackspace() {
     if (widget.controller.text.isEmpty) {
       return;
     }
-
     if (_selectionStart != null && _selectionEnd != null) {
-      // 선택 영역이 있을 경우
-      final startIndex = _selectionStart! < _selectionEnd! ? _selectionStart! : _selectionEnd!;
-      final endIndex = _selectionStart! > _selectionEnd! ? _selectionStart! : _selectionEnd!;
-
-      final text = widget.controller.text;
-      final newText = text.substring(0, startIndex) + text.substring(endIndex);
-      final newCursorPosition = startIndex;
-
-      widget.controller.text = newText;
-      setState(() {
-        _cursorPosition = newCursorPosition;
-        _selectionStart = null;
-        _selectionEnd = null;
-      });
-
-      // 텍스트 입력 연결 업데이트
-      if (_textInputConnection != null && _textInputConnection!.attached) {
-        _textInputConnection!.setEditingState(
-          TextEditingValue(
-            text: newText,
-            selection: TextSelection.collapsed(offset: newCursorPosition),
-          ),
-        );
-      }
-    } else if (_cursorPosition > 0) {
-      // 선택 영역이 없을 경우 (기존 백스페이스 기능 유지)
-      final text = widget.controller.text;
-      final newText = text.substring(0, _cursorPosition - 1) + text.substring(_cursorPosition);
-      final newCursorPosition = _cursorPosition - 1;
-
-      widget.controller.text = newText;
-      setState(() {
-        _cursorPosition = newCursorPosition;
-      });
-
-      // 텍스트 입력 연결 업데이트
-      if (_textInputConnection != null && _textInputConnection!.attached) {
-        _textInputConnection!.setEditingState(
-          TextEditingValue(
-            text: newText,
-            selection: TextSelection.collapsed(offset: newCursorPosition),
-          ),
-        );
-      }
-    }
-  }
-
-  void _handleSpacebar() {
-    if (widget.controller.text.isEmpty) {
-      // 텍스트가 비어있을 경우, 첫 번째 공백 추가 및 커서 이동
-      widget.controller.text = " ";
-
-      if (_textInputConnection != null && _textInputConnection!.attached) {
-        _textInputConnection!.setEditingState(
-          TextEditingValue(
-            text: " ",
-            selection: TextSelection.collapsed(offset: 1),
-          ),
-        );
-      }
-
-      setState(() {
-        _cursorPosition = 1;
-      });
+      _deleteSelectField();
       return;
     }
 
+    // 선택 영역이 없을 경우 (기존 백스페이스 기능 유지)
     final text = widget.controller.text;
-    final newText = "${text.substring(0, _cursorPosition)} ${text.substring(_cursorPosition)}";
+    final newText = text.substring(0, _cursorPosition - 1) + text.substring(_cursorPosition);
+    final newCursorPosition = _cursorPosition - 1;
 
     widget.controller.text = newText;
+    setState(() {
+      _cursorPosition = newCursorPosition;
+    });
 
     // 텍스트 입력 연결 업데이트
     if (_textInputConnection != null && _textInputConnection!.attached) {
       _textInputConnection!.setEditingState(
         TextEditingValue(
           text: newText,
-          selection: TextSelection.collapsed(offset: _cursorPosition),
+          selection: TextSelection.collapsed(offset: newCursorPosition),
         ),
       );
     }
-
-    setState(() {
-      _cursorPosition++;
-    });
   }
 
   void _handleShiftKeyState(LogicalKeyboardKey key, bool isPressed) {
@@ -408,11 +366,47 @@ class _LineStyledTextFieldState extends State<LineStyledTextField> implements Te
     }
   }
 
+  /// 선택 영역이 있을 경우 해당 영역을 삭제함
+  void _deleteSelectField() {
+    if (_selectionStart == null || _selectionEnd == null) {
+      return;
+    }
+
+    final startIndex = _selectionStart! < _selectionEnd! ? _selectionStart! : _selectionEnd!;
+    final endIndex = _selectionStart! > _selectionEnd! ? _selectionStart! : _selectionEnd!;
+
+    final text = widget.controller.text;
+    final newText = text.substring(0, startIndex) + text.substring(endIndex);
+    final newCursorPosition = startIndex;
+
+    widget.controller.text = newText;
+    setState(() {
+      _cursorPosition = newCursorPosition;
+      _selectionStart = null;
+      _selectionEnd = null;
+    });
+
+    // 텍스트 입력 연결 업데이트
+    if (_textInputConnection != null && _textInputConnection!.attached) {
+      _textInputConnection!.setEditingState(
+        TextEditingValue(
+          text: newText,
+          selection: TextSelection.collapsed(offset: newCursorPosition),
+        ),
+      );
+    }
+  }
+
   void _handleLeftOrRightKey(LogicalKeyboardKey key) {
     final isMovingLeft = key == LogicalKeyboardKey.arrowLeft;
     final moveOffset = isMovingLeft ? -1 : 1;
 
-    // 커서를 더이상 움질일 곳이 없을 때
+    // 커서를 더이상 움질일 곳이 없을 때(왼쪽으로)
+    if((_cursorPosition + moveOffset) < 0){
+      return;
+    }
+
+    // 커서를 더이상 움질일 곳이 없을 때(오른쪽으로)
     if(widget.controller.text.length < _cursorPosition + moveOffset){
       return;
     }
@@ -438,7 +432,7 @@ class _LineStyledTextFieldState extends State<LineStyledTextField> implements Te
     if (_textInputConnection != null && _textInputConnection!.attached) {
       _textInputConnection!.setEditingState(
         TextEditingValue(
-          text: widget.controller.text, // 현재 텍스트를 함께 전달
+          text: widget.controller.text,
           selection: TextSelection.collapsed(offset: _cursorPosition),
         ),
       );
@@ -477,6 +471,8 @@ class _LineStyledTextFieldState extends State<LineStyledTextField> implements Te
           _handleLeftOrRightKey(event.logicalKey);
           return;
         }
+
+        _deleteSelectField();
 
       },
       child: Focus(
@@ -581,7 +577,13 @@ class LineStyleTextPainter extends CustomPainter {
     // 각 줄을 적절한 스타일로 그리기
     for (int i = 0; i < lines.length; i++) {
       // 이 줄의 스타일 가져오기 (스타일이 줄 수보다 적을 경우 순환)
-      final lineStyle = lineStyles[i % lineStyles.length];
+      LineStyle lineStyle;
+      if((lineStyles.length - 1) < i){
+        lineStyle = lineStyles[0];
+      }else{
+        lineStyle = lineStyles[i];
+      }
+
       final line = lines[i];
       final lineLength = line.length;
       final lineStartIndex = runningLength;

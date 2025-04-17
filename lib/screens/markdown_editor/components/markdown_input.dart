@@ -93,7 +93,6 @@ class _LineStyledTextFieldState extends State<LineStyledTextField> implements Te
     widget.onChanged!(widget.controller.text);
 
     if(widget.controller.text.contains("# ")){
-      // int cursorRowIndex = getCursorRowIndex();
       List<int>? target = getTargetStringRowIndex("# ");
 
       if(target == null){
@@ -105,10 +104,7 @@ class _LineStyledTextFieldState extends State<LineStyledTextField> implements Te
           AddLineStyleEvent(style: LineStyleProvider.getLineStyle(MarkdownLineStyles.h1), index: t),
         );
       }
-
     }
-
-    setState(() {});
   }
 
   void _startCursorBlink() {

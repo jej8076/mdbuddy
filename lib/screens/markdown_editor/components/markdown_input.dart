@@ -328,6 +328,7 @@ class _LineStyledTextFieldState extends State<LineStyledTextField> implements Te
     if (widget.controller.text.isEmpty) {
       return;
     }
+
     if (_selectionStart != null && _selectionEnd != null) {
       _deleteSelectField();
       return;
@@ -364,6 +365,7 @@ class _LineStyledTextFieldState extends State<LineStyledTextField> implements Te
 
   /// 선택 영역이 있을 경우 해당 영역을 삭제함
   void _deleteSelectField() {
+
     if (_selectionStart == null || _selectionEnd == null) {
       return;
     }
@@ -393,6 +395,7 @@ class _LineStyledTextFieldState extends State<LineStyledTextField> implements Te
     }
   }
 
+  // 방향키 좌우
   void _handleLeftOrRightKey(LogicalKeyboardKey key) {
     final isMovingLeft = key == LogicalKeyboardKey.arrowLeft;
     final moveOffset = isMovingLeft ? -1 : 1;
@@ -435,6 +438,96 @@ class _LineStyledTextFieldState extends State<LineStyledTextField> implements Te
     }
   }
 
+  // 방향키 상하
+  void _handleUpOrDownKey(LogicalKeyboardKey key) {
+    final isMovingUp = LogicalKeyboardKey.arrowUp == key;
+
+    int indexInLine = findCursorIndexInLine();
+
+    int newlineIndex = -1;
+    if(isMovingUp){
+      newlineIndex = widget.controller.text.lastIndexOf('\n', _cursorPosition - 1);
+    }else{
+      newlineIndex = widget.controller.text.indexOf('\n', _cursorPosition);
+    }
+
+    if (newlineIndex == -1) {
+      setState(() {
+        _cursorPosition = isMovingUp ? 0 : widget.controller.text.length;
+        _selectionStart = null;
+        _selectionEnd = null;
+      });
+      return;
+    }
+
+    int? newLineStartIndex;
+
+    if(isMovingUp){
+      newLineStartIndex = widget.controller.text.lastIndexOf('\n', newlineIndex - 1);
+    }else{
+      newLineStartIndex = widget.controller.text.indexOf('\n', newlineIndex - 1);
+    }
+
+    if (newLineStartIndex == -1) {
+      newLineStartIndex = 0; // 첫 번째 줄인 경우
+    } else {
+      newLineStartIndex++; // 줄바꿈 문자 다음부터 시작
+    }
+
+    int resultCursor = newLineStartIndex + indexInLine;
+
+    if (_isShiftPressed) {
+      setState(() {
+        if (_selectionStart == null) {
+          _selectionStart = _cursorPosition;
+        }
+        _cursorPosition = resultCursor;
+        _selectionEnd = _cursorPosition;
+      });
+    } else {
+      setState(() {
+        _cursorPosition = resultCursor;
+        _selectionStart = null;
+        _selectionEnd = null;
+      });
+    }
+
+    // print("_cursorPosition: $_cursorPosition, _selectionStart: $_selectionStart, _selectionEnd: $_selectionEnd");
+
+    if (_textInputConnection != null && _textInputConnection!.attached) {
+      _textInputConnection!.setEditingState(
+        TextEditingValue(
+          text: widget.controller.text,
+          selection: TextSelection.collapsed(offset: _cursorPosition),
+        ),
+      );
+    }
+  }
+
+  bool isFunctionKey(LogicalKeyboardKey key){
+    return key == LogicalKeyboardKey.shiftLeft ||
+        key == LogicalKeyboardKey.shiftRight ||
+        key == LogicalKeyboardKey.altLeft ||
+        key == LogicalKeyboardKey.altRight ||
+        key == LogicalKeyboardKey.metaLeft || // Cmd (macOS), Windows key (Windows)
+        key == LogicalKeyboardKey.metaRight || // Cmd (macOS), Windows key (Windows)
+        key == LogicalKeyboardKey.controlLeft ||
+        key == LogicalKeyboardKey.controlRight;
+  }
+
+  // 커서 위치가 현재 줄에서 몇번 째 index에 있는 지 확인
+  int findCursorIndexInLine() {
+    if(_cursorPosition == 0){
+      return 0;
+    }
+    int previousNewlineIndex = widget.controller.text.lastIndexOf('\n', _cursorPosition - 1);
+    if (previousNewlineIndex == -1) {
+      return _cursorPosition; // 이전 줄바꿈이 없으면 처음부터 커서까지의 인덱스가 현재 줄에서의 인덱스
+    } else {
+      return _cursorPosition - previousNewlineIndex - 1; // 이전 줄바꿈 이후부터 커서까지의 인덱스
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return KeyboardListener(
@@ -468,6 +561,17 @@ class _LineStyledTextFieldState extends State<LineStyledTextField> implements Te
           return;
         }
 
+        // up or down
+        if (event.logicalKey == LogicalKeyboardKey.arrowUp || event.logicalKey == LogicalKeyboardKey.arrowDown) {
+          _handleUpOrDownKey(event.logicalKey);
+          return;
+        }
+
+        if(isFunctionKey(event.logicalKey)){
+          return;
+        }
+
+        // 이 밑은 일반 텍스트 입력되는 영역
         _deleteSelectField();
 
       },

@@ -4,6 +4,9 @@ enum MarkdownLineStyles {
   normal,
   h1,
   h2,
+  h3,
+  h4,
+  h5,
   code,
 }
 
@@ -15,7 +18,8 @@ class LineStyle {
   final FontStyle fontStyle;
   final TextDecoration decoration;
 
-  const LineStyle({ // const 생성자를 추가하여 상수 인스턴스를 만들 수 있도록 함
+  const LineStyle({
+    // const 생성자를 추가하여 상수 인스턴스를 만들 수 있도록 함
     required this.color,
     required this.fontWeight,
     required this.fontSize,
@@ -27,14 +31,14 @@ class LineStyle {
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
-          other is LineStyle &&
-              runtimeType == other.runtimeType &&
-              color == other.color &&
-              fontWeight == other.fontWeight &&
-              fontSize == other.fontSize &&
-              fontFamily == other.fontFamily &&
-              fontStyle == other.fontStyle &&
-              decoration == other.decoration;
+      other is LineStyle &&
+          runtimeType == other.runtimeType &&
+          color == other.color &&
+          fontWeight == other.fontWeight &&
+          fontSize == other.fontSize &&
+          fontFamily == other.fontFamily &&
+          fontStyle == other.fontStyle &&
+          decoration == other.decoration;
 
   @override
   int get hashCode =>
@@ -47,10 +51,23 @@ class LineStyle {
 }
 
 class LineStyleProvider {
-  static const LineStyle normal = LineStyle(color: Colors.black, fontWeight: FontWeight.normal, fontSize: 16);
-  static const LineStyle h1 = LineStyle(color: Colors.black, fontWeight: FontWeight.bold, fontSize: 24);
-  static const LineStyle h2 = LineStyle(color: Colors.black, fontWeight: FontWeight.bold, fontSize: 20);
-  static const LineStyle code = LineStyle(color: Colors.grey, fontWeight: FontWeight.w400, fontSize: 15, fontFamily: 'monospace');
+  static const LineStyle normal = LineStyle(
+      color: Colors.black, fontWeight: FontWeight.normal, fontSize: 16);
+  static const LineStyle h1 =
+      LineStyle(color: Colors.black, fontWeight: FontWeight.bold, fontSize: 32);
+  static const LineStyle h2 =
+      LineStyle(color: Colors.black, fontWeight: FontWeight.bold, fontSize: 28);
+  static const LineStyle h3 =
+      LineStyle(color: Colors.black, fontWeight: FontWeight.bold, fontSize: 24);
+  static const LineStyle h4 =
+      LineStyle(color: Colors.black, fontWeight: FontWeight.bold, fontSize: 20);
+  static const LineStyle h5 =
+      LineStyle(color: Colors.black, fontWeight: FontWeight.bold, fontSize: 16);
+  static const LineStyle code = LineStyle(
+      color: Colors.grey,
+      fontWeight: FontWeight.w400,
+      fontSize: 15,
+      fontFamily: 'monospace');
 
   static LineStyle getLineStyle(MarkdownLineStyles lineStyle) {
     switch (lineStyle) {
@@ -60,6 +77,12 @@ class LineStyleProvider {
         return h1;
       case MarkdownLineStyles.h2:
         return h2;
+      case MarkdownLineStyles.h3:
+        return h3;
+      case MarkdownLineStyles.h4:
+        return h4;
+      case MarkdownLineStyles.h5:
+        return h5;
       case MarkdownLineStyles.code:
         return code;
       default:

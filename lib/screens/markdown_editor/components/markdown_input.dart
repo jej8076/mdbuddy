@@ -1,11 +1,9 @@
+import 'dart:async';
 import 'dart:math';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'dart:async';
-
-import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:mdbuddy/bloc/markdown_line_style_bloc.dart';
+import 'package:mdbuddy/screens/markdown_editor/components/markdown/markdown_provider.dart';
 import 'package:mdbuddy/utils/markdown_line_style_provider.dart';
 
 class LineStyledTextField extends StatefulWidget {
@@ -34,7 +32,8 @@ class LineStyledTextField extends StatefulWidget {
   _LineStyledTextFieldState createState() => _LineStyledTextFieldState();
 }
 
-class _LineStyledTextFieldState extends State<LineStyledTextField> implements TextInputClient {
+class _LineStyledTextFieldState extends State<LineStyledTextField>
+    implements TextInputClient {
   late FocusNode _focusNode;
   bool _showCursor = false;
   Timer? _cursorTimer;
@@ -92,18 +91,16 @@ class _LineStyledTextFieldState extends State<LineStyledTextField> implements Te
     }
     widget.onChanged!(widget.controller.text);
 
-    if(widget.controller.text.contains("# ")){
-      List<int>? target = getTargetStringRowIndex("# ");
+    print("${widget.controller.text}");
 
-      if(target == null){
-        return;
-      }
-
-      for(int t in target){
-        BlocProvider.of<MarkdownLineStyleBloc>(context).add(
-          AddLineStyleEvent(style: LineStyleProvider.getLineStyle(MarkdownLineStyles.h1), index: t),
-        );
-      }
+    // MarkdownProvider.processH(context, widget.controller);
+    int removedChar = MarkdownProvider.processH(context, widget.controller);
+    if (removedChar > 0) {
+      int position = _cursorPosition - removedChar;
+      setState(() {
+        _cursorPosition = position;
+      });
+      _updateTextInputConnection(widget.controller.text, position);
     }
   }
 
@@ -121,9 +118,7 @@ class _LineStyledTextFieldState extends State<LineStyledTextField> implements Te
   void _openKeyboard() {
     if (_textInputConnection == null || !_textInputConnection!.attached) {
       _textInputConnection = TextInput.attach(
-          this,
-          TextInputConfiguration(inputType: TextInputType.multiline)
-      );
+          this, TextInputConfiguration(inputType: TextInputType.multiline));
       _textInputConnection!.show();
     }
   }
@@ -132,6 +127,17 @@ class _LineStyledTextFieldState extends State<LineStyledTextField> implements Te
     if (_textInputConnection != null && _textInputConnection!.attached) {
       _textInputConnection!.close();
       _textInputConnection = null;
+    }
+  }
+
+  void _updateTextInputConnection(String text, int cursorPosition) {
+    if (_textInputConnection != null && _textInputConnection!.attached) {
+      _textInputConnection!.setEditingState(
+        TextEditingValue(
+          text: text,
+          selection: TextSelection.collapsed(offset: cursorPosition),
+        ),
+      );
     }
   }
 
@@ -169,9 +175,9 @@ class _LineStyledTextFieldState extends State<LineStyledTextField> implements Te
 
   @override
   TextEditingValue get currentTextEditingValue => TextEditingValue(
-    text: widget.controller.text,
-    selection: TextSelection.collapsed(offset: _cursorPosition),
-  );
+        text: widget.controller.text,
+        selection: TextSelection.collapsed(offset: _cursorPosition),
+      );
 
   @override
   AutofillScope? get currentAutofillScope => null;
@@ -192,7 +198,8 @@ class _LineStyledTextFieldState extends State<LineStyledTextField> implements Te
   void hideToolbar() {}
 
   @override
-  void didChangeInputControl(TextInputControl? oldControl, TextInputControl? newControl) {}
+  void didChangeInputControl(
+      TextInputControl? oldControl, TextInputControl? newControl) {}
 
   void _insertText(String text) {
     final currentText = widget.controller.text;
@@ -293,7 +300,8 @@ class _LineStyledTextFieldState extends State<LineStyledTextField> implements Te
 
   // 현재 커서가 몇번째 줄에 있는 지 확인하는 함수
   int getCursorRowIndex() {
-    if (_cursorPosition < 0 || _cursorPosition > widget.controller.text.length) {
+    if (_cursorPosition < 0 ||
+        _cursorPosition > widget.controller.text.length) {
       return -1; // 유효하지 않은 커서 위치
     }
 
@@ -304,24 +312,6 @@ class _LineStyledTextFieldState extends State<LineStyledTextField> implements Te
       }
     }
     return rowNumber;
-  }
-
-  // 입력된 String이 몇번째 줄에 있는 지 확인하는 함수
-  List<int>? getTargetStringRowIndex(String? s) {
-    if (s == null || widget.controller.text == "") {
-      return null;
-    }
-
-    List<String> lines = widget.controller.text.split("\n");
-
-    List<int> result = [];
-    for (int i = 0; i < lines.length; i++) {
-      String line = lines[i];
-      if (line.contains(s)) {
-        result.add(i);
-      }
-    }
-    return result;
   }
 
   void _handleBackspace() {
@@ -336,7 +326,8 @@ class _LineStyledTextFieldState extends State<LineStyledTextField> implements Te
 
     // 선택 영역이 없을 경우 (기존 백스페이스 기능 유지)
     final text = widget.controller.text;
-    final newText = text.substring(0, _cursorPosition - 1) + text.substring(_cursorPosition);
+    final newText = text.substring(0, _cursorPosition - 1) +
+        text.substring(_cursorPosition);
     final newCursorPosition = _cursorPosition - 1;
 
     widget.controller.text = newText;
@@ -356,7 +347,8 @@ class _LineStyledTextFieldState extends State<LineStyledTextField> implements Te
   }
 
   void _handleShiftKeyState(LogicalKeyboardKey key, bool isPressed) {
-    if (key == LogicalKeyboardKey.shiftLeft || key == LogicalKeyboardKey.shiftRight) {
+    if (key == LogicalKeyboardKey.shiftLeft ||
+        key == LogicalKeyboardKey.shiftRight) {
       setState(() {
         _isShiftPressed = isPressed;
       });
@@ -365,13 +357,14 @@ class _LineStyledTextFieldState extends State<LineStyledTextField> implements Te
 
   /// 선택 영역이 있을 경우 해당 영역을 삭제함
   void _deleteSelectField() {
-
     if (_selectionStart == null || _selectionEnd == null) {
       return;
     }
 
-    final startIndex = _selectionStart! < _selectionEnd! ? _selectionStart! : _selectionEnd!;
-    final endIndex = _selectionStart! > _selectionEnd! ? _selectionStart! : _selectionEnd!;
+    final startIndex =
+        _selectionStart! < _selectionEnd! ? _selectionStart! : _selectionEnd!;
+    final endIndex =
+        _selectionStart! > _selectionEnd! ? _selectionStart! : _selectionEnd!;
 
     final text = widget.controller.text;
     final newText = text.substring(0, startIndex) + text.substring(endIndex);
@@ -401,12 +394,12 @@ class _LineStyledTextFieldState extends State<LineStyledTextField> implements Te
     final moveOffset = isMovingLeft ? -1 : 1;
 
     // 커서를 더이상 움질일 곳이 없을 때(왼쪽으로)
-    if((_cursorPosition + moveOffset) < 0){
+    if ((_cursorPosition + moveOffset) < 0) {
       return;
     }
 
     // 커서를 더이상 움질일 곳이 없을 때(오른쪽으로)
-    if(widget.controller.text.length < _cursorPosition + moveOffset){
+    if (widget.controller.text.length < _cursorPosition + moveOffset) {
       return;
     }
 
@@ -445,9 +438,10 @@ class _LineStyledTextFieldState extends State<LineStyledTextField> implements Te
     int indexInLine = findCursorIndexInLine();
 
     int newlineIndex = -1;
-    if(isMovingUp){
-      newlineIndex = widget.controller.text.lastIndexOf('\n', _cursorPosition - 1);
-    }else{
+    if (isMovingUp) {
+      newlineIndex =
+          widget.controller.text.lastIndexOf('\n', _cursorPosition - 1);
+    } else {
       newlineIndex = widget.controller.text.indexOf('\n', _cursorPosition);
     }
 
@@ -462,10 +456,12 @@ class _LineStyledTextFieldState extends State<LineStyledTextField> implements Te
 
     int? newLineStartIndex;
 
-    if(isMovingUp){
-      newLineStartIndex = widget.controller.text.lastIndexOf('\n', newlineIndex - 1);
-    }else{
-      newLineStartIndex = widget.controller.text.indexOf('\n', newlineIndex - 1);
+    if (isMovingUp) {
+      newLineStartIndex =
+          widget.controller.text.lastIndexOf('\n', newlineIndex - 1);
+    } else {
+      newLineStartIndex =
+          widget.controller.text.indexOf('\n', newlineIndex - 1);
     }
 
     if (newLineStartIndex == -1) {
@@ -504,27 +500,33 @@ class _LineStyledTextFieldState extends State<LineStyledTextField> implements Te
     }
   }
 
-  bool isFunctionKey(LogicalKeyboardKey key){
+  bool isFunctionKey(LogicalKeyboardKey key) {
     return key == LogicalKeyboardKey.shiftLeft ||
         key == LogicalKeyboardKey.shiftRight ||
         key == LogicalKeyboardKey.altLeft ||
         key == LogicalKeyboardKey.altRight ||
-        key == LogicalKeyboardKey.metaLeft || // Cmd (macOS), Windows key (Windows)
-        key == LogicalKeyboardKey.metaRight || // Cmd (macOS), Windows key (Windows)
+        key ==
+            LogicalKeyboardKey.metaLeft || // Cmd (macOS), Windows key (Windows)
+        key ==
+            LogicalKeyboardKey
+                .metaRight || // Cmd (macOS), Windows key (Windows)
         key == LogicalKeyboardKey.controlLeft ||
         key == LogicalKeyboardKey.controlRight;
   }
 
   // 커서 위치가 현재 줄에서 몇번 째 index에 있는 지 확인
   int findCursorIndexInLine() {
-    if(_cursorPosition == 0){
+    if (_cursorPosition == 0) {
       return 0;
     }
-    int previousNewlineIndex = widget.controller.text.lastIndexOf('\n', _cursorPosition - 1);
+    int previousNewlineIndex =
+        widget.controller.text.lastIndexOf('\n', _cursorPosition - 1);
     if (previousNewlineIndex == -1) {
       return _cursorPosition; // 이전 줄바꿈이 없으면 처음부터 커서까지의 인덱스가 현재 줄에서의 인덱스
     } else {
-      return _cursorPosition - previousNewlineIndex - 1; // 이전 줄바꿈 이후부터 커서까지의 인덱스
+      return _cursorPosition -
+          previousNewlineIndex -
+          1; // 이전 줄바꿈 이후부터 커서까지의 인덱스
     }
   }
 
@@ -533,7 +535,6 @@ class _LineStyledTextFieldState extends State<LineStyledTextField> implements Te
     return KeyboardListener(
       focusNode: FocusNode(skipTraversal: true),
       onKeyEvent: (KeyEvent event) {
-
         // shift down
         if (event is KeyDownEvent) {
           _handleShiftKeyState(event.logicalKey, true);
@@ -556,24 +557,25 @@ class _LineStyledTextFieldState extends State<LineStyledTextField> implements Te
         }
 
         // left or right
-        if (event.logicalKey == LogicalKeyboardKey.arrowLeft || event.logicalKey == LogicalKeyboardKey.arrowRight) {
+        if (event.logicalKey == LogicalKeyboardKey.arrowLeft ||
+            event.logicalKey == LogicalKeyboardKey.arrowRight) {
           _handleLeftOrRightKey(event.logicalKey);
           return;
         }
 
         // up or down
-        if (event.logicalKey == LogicalKeyboardKey.arrowUp || event.logicalKey == LogicalKeyboardKey.arrowDown) {
+        if (event.logicalKey == LogicalKeyboardKey.arrowUp ||
+            event.logicalKey == LogicalKeyboardKey.arrowDown) {
           _handleUpOrDownKey(event.logicalKey);
           return;
         }
 
-        if(isFunctionKey(event.logicalKey)){
+        if (isFunctionKey(event.logicalKey)) {
           return;
         }
 
         // 이 밑은 일반 텍스트 입력되는 영역
         _deleteSelectField();
-
       },
       child: Focus(
         focusNode: _focusNode,
@@ -589,8 +591,9 @@ class _LineStyledTextFieldState extends State<LineStyledTextField> implements Te
               showCursor: _showCursor && _focusNode.hasFocus,
               cursorPosition: _cursorPosition,
               padding: widget.padding,
-              selectionStart: _selectionStart, // 선택 시작 위치 전달
-              selectionEnd: _selectionEnd,   // 선택 끝 위치 전달
+              selectionStart: _selectionStart,
+              // 선택 시작 위치 전달
+              selectionEnd: _selectionEnd, // 선택 끝 위치 전달
             ),
             child: Container(
               width: double.infinity,
@@ -655,9 +658,11 @@ class LineStyleTextPainter extends CustomPainter {
 
         canvas.drawLine(
             Offset(padding.left, padding.top),
-            Offset(padding.left, padding.top + (lineStyles.isNotEmpty ? lineStyles[0].fontSize : 16)),
-            paint
-        );
+            Offset(
+                padding.left,
+                padding.top +
+                    (lineStyles.isNotEmpty ? lineStyles[0].fontSize : 16)),
+            paint);
       }
 
       return;
@@ -678,9 +683,9 @@ class LineStyleTextPainter extends CustomPainter {
     for (int i = 0; i < lines.length; i++) {
       // 이 줄의 스타일 가져오기 (스타일이 줄 수보다 적을 경우 순환)
       LineStyle lineStyle;
-      if((lineStyles.length - 1) < i){
+      if ((lineStyles.length - 1) < i) {
         lineStyle = lineStyles[0];
-      }else{
+      } else {
         lineStyle = lineStyles[i];
       }
 
@@ -705,12 +710,19 @@ class LineStyleTextPainter extends CustomPainter {
         final selectionStartInLineRaw = selectionStart! - lineStartIndex;
         final selectionEndInLineRaw = selectionEnd! - lineStartIndex;
 
-        final selectionStartInLine = max(0, min(lineLength, min(selectionStartInLineRaw, selectionEndInLineRaw)));
-        final selectionEndInLine = max(0, min(lineLength, max(selectionStartInLineRaw, selectionEndInLineRaw)));
+        final selectionStartInLine = max(
+            0,
+            min(lineLength,
+                min(selectionStartInLineRaw, selectionEndInLineRaw)));
+        final selectionEndInLine = max(
+            0,
+            min(lineLength,
+                max(selectionStartInLineRaw, selectionEndInLineRaw)));
 
         if (selectionStartInLine < selectionEndInLine) {
           final beforeSelection = line.substring(0, selectionStartInLine);
-          final selectedText = line.substring(selectionStartInLine, selectionEndInLine);
+          final selectedText =
+              line.substring(selectionStartInLine, selectionEndInLine);
           final afterSelection = line.substring(selectionEndInLine);
 
           currentLineSpan = TextSpan(
@@ -770,7 +782,9 @@ class LineStyleTextPainter extends CustomPainter {
 
         // 커서 위치까지의 텍스트 측정
         final beforeCursorSpan = TextSpan(
-          text: cursorPositionInLine > 0 ? lines[i].substring(0, cursorPositionInLine) : "",
+          text: cursorPositionInLine > 0
+              ? lines[i].substring(0, cursorPositionInLine)
+              : "",
           style: TextStyle(
             fontSize: lineStyle.fontSize,
             fontWeight: lineStyle.fontWeight,
@@ -785,10 +799,7 @@ class LineStyleTextPainter extends CustomPainter {
 
         cursorPainter.layout();
 
-        cursorOffset = Offset(
-            padding.left + cursorPainter.width,
-            y
-        );
+        cursorOffset = Offset(padding.left + cursorPainter.width, y);
 
         cursorHeight = lineStyle.fontSize;
       }
@@ -821,10 +832,8 @@ class LineStyleTextPainter extends CustomPainter {
 
       textPainter.layout();
 
-      cursorOffset = Offset(
-          padding.left + textPainter.width,
-          y - textPainter.height
-      );
+      cursorOffset =
+          Offset(padding.left + textPainter.width, y - textPainter.height);
 
       cursorHeight = lineStyle.fontSize;
     }
@@ -835,11 +844,8 @@ class LineStyleTextPainter extends CustomPainter {
         ..color = Colors.black
         ..strokeWidth = 2.0;
 
-      canvas.drawLine(
-          cursorOffset,
-          Offset(cursorOffset.dx, cursorOffset.dy + cursorHeight),
-          paint
-      );
+      canvas.drawLine(cursorOffset,
+          Offset(cursorOffset.dx, cursorOffset.dy + cursorHeight), paint);
     }
   }
 

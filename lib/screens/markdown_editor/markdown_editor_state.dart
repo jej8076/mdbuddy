@@ -37,9 +37,11 @@ class MarkdownEditorState extends State<MarkdownEditor> {
           preferredSize: Size.fromHeight(20.0),
           child: GestureDetector(
             // AppBar 전체 영역을 창 이동에 사용 (데스크톱 전용)
-            onPanStart: isDesktop() ? (details) {
-              windowManager.startDragging();
-            } : null,
+            onPanStart: isDesktop()
+                ? (details) {
+                    windowManager.startDragging();
+                  }
+                : null,
             child: AppBar(
               backgroundColor: Colors.white,
               flexibleSpace: SafeArea(
@@ -54,14 +56,17 @@ class MarkdownEditorState extends State<MarkdownEditor> {
                         onHorizontalDragUpdate: (details) {
                           setState(() {
                             // 화면 범위 내에서만 이동 가능하도록 제한
-                            double newPosition = _dragPosition + details.delta.dx;
+                            double newPosition =
+                                _dragPosition + details.delta.dx;
                             if (newPosition >= 0 &&
-                                newPosition <= MediaQuery.of(context).size.width - 50) {
+                                newPosition <=
+                                    MediaQuery.of(context).size.width - 50) {
                               _dragPosition = newPosition;
                             }
                           });
                         },
-                        child: Container( // 명시적인 너비 설정
+                        child: Container(
+                          // 명시적인 너비 설정
                           width: 50.0, // 예시 너비
                           color: Colors.transparent, // 필요하다면 배경색 설정
                         ),
@@ -79,12 +84,16 @@ class MarkdownEditorState extends State<MarkdownEditor> {
             return Column(
               children: [
                 Expanded(
-                  child: LineStyledTextField(
-                    controller: _controller,
-                    lineStyles: lineStyles,
-                    onChanged: (text) {
-                      setState(() {});
-                    },
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(
+                        32.0, 24.0, 32.0, 24.0), // 4방향 margin 추가
+                    child: LineStyledTextField(
+                      controller: _controller,
+                      lineStyles: lineStyles,
+                      onChanged: (text) {
+                        setState(() {});
+                      },
+                    ),
                   ),
                 ),
               ],

@@ -315,38 +315,6 @@ class _LineStyledTextFieldState extends State<LineStyledTextField>
     return rowNumber;
   }
 
-  // void _handleBackspace() {
-  //   if (widget.controller.text.isEmpty) {
-  //     return;
-  //   }
-  //
-  //   if (_selectionStart != null && _selectionEnd != null) {
-  //     _deleteSelectField();
-  //     return;
-  //   }
-  //
-  //   // 선택 영역이 없을 경우 (기존 백스페이스 기능 유지)
-  //   final text = widget.controller.text;
-  //   final newText = text.substring(0, _cursorPosition - 1) +
-  //       text.substring(_cursorPosition);
-  //   final newCursorPosition = _cursorPosition - 1;
-  //
-  //   widget.controller.text = newText;
-  //   setState(() {
-  //     _cursorPosition = newCursorPosition;
-  //   });
-  //
-  //   // 텍스트 입력 연결 업데이트
-  //   if (_textInputConnection != null && _textInputConnection!.attached) {
-  //     _textInputConnection!.setEditingState(
-  //       TextEditingValue(
-  //         text: newText,
-  //         selection: TextSelection.collapsed(offset: newCursorPosition),
-  //       ),
-  //     );
-  //   }
-  // }
-
   void _handleBackspace() {
     if (widget.controller.text.isEmpty) return;
 
@@ -391,15 +359,7 @@ class _LineStyledTextFieldState extends State<LineStyledTextField>
     setState(() {
       _cursorPosition = newCursorPosition;
     });
-
-    if (_textInputConnection != null && _textInputConnection!.attached) {
-      _textInputConnection!.setEditingState(
-        TextEditingValue(
-          text: newText,
-          selection: TextSelection.collapsed(offset: newCursorPosition),
-        ),
-      );
-    }
+    _updateTextInputConnection(newText, newCursorPosition);
   }
 
   void _handleShiftKeyState(LogicalKeyboardKey key, bool isPressed) {

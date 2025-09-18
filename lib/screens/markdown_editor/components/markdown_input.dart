@@ -4,6 +4,7 @@ import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:mdbuddy/screens/markdown_editor/components/markdown/markdown_provider.dart';
+import 'package:mdbuddy/utils/HangulUtils.dart';
 import 'package:mdbuddy/utils/markdown_line_style_provider.dart';
 
 class LineStyledTextField extends StatefulWidget {
@@ -314,28 +315,83 @@ class _LineStyledTextFieldState extends State<LineStyledTextField>
     return rowNumber;
   }
 
+  // void _handleBackspace() {
+  //   if (widget.controller.text.isEmpty) {
+  //     return;
+  //   }
+  //
+  //   if (_selectionStart != null && _selectionEnd != null) {
+  //     _deleteSelectField();
+  //     return;
+  //   }
+  //
+  //   // 선택 영역이 없을 경우 (기존 백스페이스 기능 유지)
+  //   final text = widget.controller.text;
+  //   final newText = text.substring(0, _cursorPosition - 1) +
+  //       text.substring(_cursorPosition);
+  //   final newCursorPosition = _cursorPosition - 1;
+  //
+  //   widget.controller.text = newText;
+  //   setState(() {
+  //     _cursorPosition = newCursorPosition;
+  //   });
+  //
+  //   // 텍스트 입력 연결 업데이트
+  //   if (_textInputConnection != null && _textInputConnection!.attached) {
+  //     _textInputConnection!.setEditingState(
+  //       TextEditingValue(
+  //         text: newText,
+  //         selection: TextSelection.collapsed(offset: newCursorPosition),
+  //       ),
+  //     );
+  //   }
+  // }
+
   void _handleBackspace() {
-    if (widget.controller.text.isEmpty) {
-      return;
-    }
+    if (widget.controller.text.isEmpty) return;
 
     if (_selectionStart != null && _selectionEnd != null) {
       _deleteSelectField();
       return;
     }
 
-    // 선택 영역이 없을 경우 (기존 백스페이스 기능 유지)
+    // 조합 중일 때는 Flutter 기본 동작 사용
+    if (_isComposing()) return;
+
     final text = widget.controller.text;
+
+    // 한글 자모 단위 삭제 시도
+    if (_cursorPosition > 0) {
+      final char = text[_cursorPosition - 1];
+      final reducedChar = HangulUtils.removeLastJamo(char);
+
+      if (reducedChar != null) {
+        final newText = text.substring(0, _cursorPosition - 1) +
+            reducedChar +
+            text.substring(_cursorPosition);
+        _updateText(newText, _cursorPosition);
+        return;
+      }
+    }
+
+    // 일반 문자 삭제
     final newText = text.substring(0, _cursorPosition - 1) +
         text.substring(_cursorPosition);
-    final newCursorPosition = _cursorPosition - 1;
+    _updateText(newText, _cursorPosition - 1);
+  }
 
+  bool _isComposing() {
+    return _textInputConnection != null &&
+        _textInputConnection!.attached &&
+        widget.controller.value.composing.isValid;
+  }
+
+  void _updateText(String newText, int newCursorPosition) {
     widget.controller.text = newText;
     setState(() {
       _cursorPosition = newCursorPosition;
     });
 
-    // 텍스트 입력 연결 업데이트
     if (_textInputConnection != null && _textInputConnection!.attached) {
       _textInputConnection!.setEditingState(
         TextEditingValue(

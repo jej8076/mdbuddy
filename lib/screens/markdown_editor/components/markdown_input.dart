@@ -806,10 +806,6 @@ class LineStyleTextPainter extends CustomPainter {
       textPainter.layout(maxWidth: size.width - padding.horizontal);
       textPainter.paint(canvas, Offset(lineX, y));
 
-      // 커서 위치가 이 줄에 있는지 확인
-      // final lineLength = lines[i].length;
-      // final lineEndIndex = runningLength + lineLength;
-
       if (cursorPosition >= runningLength && cursorPosition <= lineEndIndex) {
         // 이 줄 내에서의 커서 위치
         final cursorPositionInLine = cursorPosition - runningLength;

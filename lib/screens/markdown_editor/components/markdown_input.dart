@@ -3,9 +3,11 @@ import 'dart:math';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:mdbuddy/screens/markdown_editor/components/markdown/markdown_prebox_provider.dart';
 import 'package:mdbuddy/screens/markdown_editor/components/markdown/markdown_provider.dart';
 import 'package:mdbuddy/utils/HangulUtils.dart';
 import 'package:mdbuddy/utils/markdown_line_style_provider.dart';
+import 'package:mdbuddy/utils/markdown_utils.dart';
 
 class LineStyledTextField extends StatefulWidget {
   final TextEditingController controller;
@@ -94,7 +96,6 @@ class _LineStyledTextFieldState extends State<LineStyledTextField>
 
     print("${widget.controller.text}");
 
-    // MarkdownProvider.processH(context, widget.controller);
     int removedChar = MarkdownProvider.processH(context, widget.controller);
     if (removedChar > 0) {
       int position = _cursorPosition - removedChar;
@@ -451,8 +452,6 @@ class _LineStyledTextFieldState extends State<LineStyledTextField>
   void _handleUpOrDownKey(LogicalKeyboardKey key) {
     final isMovingUp = LogicalKeyboardKey.arrowUp == key;
 
-    int indexInLine = findCursorIndexInLine();
-
     int newlineIndex = -1;
     if (isMovingUp) {
       newlineIndex =
@@ -486,7 +485,21 @@ class _LineStyledTextFieldState extends State<LineStyledTextField>
       newLineStartIndex++; // 줄바꿈 문자 다음부터 시작
     }
 
-    int resultCursor = newLineStartIndex + indexInLine;
+    // 이동될 라인의 텍스트 길이
+    int newLineTextLength = MarkdownUtils.getLineLengthFromIndex(
+        widget.controller.text, newLineStartIndex);
+
+    // 이동하기 전 커서의 위치의 라인안에서의 index
+    int indexInLine = findCursorIndexInLine();
+
+    int resultCursor = 0;
+
+    if (newLineTextLength < indexInLine) {
+      // 이동돼야할 라인의 커서 위치가 현재 커서 위치에서 벗어나면 이동될 문자열의 길이(맨 끝) 위치에 커서가 위치하도록 한다
+      resultCursor = newLineStartIndex + newLineTextLength;
+    } else {
+      resultCursor = newLineStartIndex + indexInLine;
+    }
 
     if (_isShiftPressed) {
       setState(() {
@@ -694,6 +707,7 @@ class LineStyleTextPainter extends CustomPainter {
     int runningLength = 0;
     Offset? cursorOffset;
     double cursorHeight = 0;
+    double originX = padding.left;
 
     // 각 줄을 적절한 스타일로 그리기
     for (int i = 0; i < lines.length; i++) {
@@ -710,8 +724,12 @@ class LineStyleTextPainter extends CustomPainter {
       final lineStartIndex = runningLength;
       final lineEndIndex = runningLength + lineLength;
 
+      // 헤더 스타일인 경우 박스 위젯 추가
+      double lineX =
+          MarkdownPreboxProvider.drawHeaderBox(canvas, lineStyle, originX, y);
+
       TextSpan currentLineSpan = TextSpan(
-        text: lines[i],
+        text: line,
         style: TextStyle(
           color: lineStyle.color,
           fontSize: lineStyle.fontSize,
@@ -786,7 +804,7 @@ class LineStyleTextPainter extends CustomPainter {
       );
 
       textPainter.layout(maxWidth: size.width - padding.horizontal);
-      textPainter.paint(canvas, Offset(padding.left, y));
+      textPainter.paint(canvas, Offset(lineX, y));
 
       // 커서 위치가 이 줄에 있는지 확인
       // final lineLength = lines[i].length;
@@ -815,7 +833,8 @@ class LineStyleTextPainter extends CustomPainter {
 
         cursorPainter.layout();
 
-        cursorOffset = Offset(padding.left + cursorPainter.width, y);
+        // lineX = markdown 표시 상자의 존재까지 고려한 위치 값
+        cursorOffset = Offset(lineX + cursorPainter.width, y);
 
         cursorHeight = lineStyle.fontSize;
       }
@@ -849,7 +868,7 @@ class LineStyleTextPainter extends CustomPainter {
       textPainter.layout();
 
       cursorOffset =
-          Offset(padding.left + textPainter.width, y - textPainter.height);
+          Offset(originX + textPainter.width, y - textPainter.height);
 
       cursorHeight = lineStyle.fontSize;
     }
@@ -872,5 +891,17 @@ class LineStyleTextPainter extends CustomPainter {
         hasFocus != oldDelegate.hasFocus ||
         showCursor != oldDelegate.showCursor ||
         cursorPosition != oldDelegate.cursorPosition;
+  }
+
+  bool _isHeaderStyle(LineStyle style) {
+    return style.fontSize > 16 && style.fontWeight == FontWeight.bold;
+  }
+
+  String _getHeaderText(LineStyle style) {
+    if (style.fontSize >= 32) return "H1";
+    if (style.fontSize >= 28) return "H2";
+    if (style.fontSize >= 24) return "H3";
+    if (style.fontSize >= 20) return "H4";
+    return "H5";
   }
 }

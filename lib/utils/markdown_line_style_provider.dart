@@ -17,16 +17,37 @@ class LineStyle {
   final String? fontFamily;
   final FontStyle fontStyle;
   final TextDecoration decoration;
+  final Widget? prefixWidget; // 추가
 
   const LineStyle({
-    // const 생성자를 추가하여 상수 인스턴스를 만들 수 있도록 함
     required this.color,
     required this.fontWeight,
     required this.fontSize,
     this.fontFamily,
     this.fontStyle = FontStyle.normal,
     this.decoration = TextDecoration.none,
+    this.prefixWidget, // 추가
   });
+
+  LineStyle copyWith({
+    Color? color,
+    FontWeight? fontWeight,
+    double? fontSize,
+    String? fontFamily,
+    FontStyle? fontStyle,
+    TextDecoration? decoration,
+    Widget? prefixWidget,
+  }) {
+    return LineStyle(
+      color: color ?? this.color,
+      fontWeight: fontWeight ?? this.fontWeight,
+      fontSize: fontSize ?? this.fontSize,
+      fontFamily: fontFamily ?? this.fontFamily,
+      fontStyle: fontStyle ?? this.fontStyle,
+      decoration: decoration ?? this.decoration,
+      prefixWidget: prefixWidget ?? this.prefixWidget,
+    );
+  }
 
   @override
   bool operator ==(Object other) =>

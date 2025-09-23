@@ -18,6 +18,7 @@ class LineStyle {
   final FontStyle fontStyle;
   final TextDecoration decoration;
   final Widget? prefixWidget; // 추가
+  final double leftPadding; // 추가
 
   const LineStyle({
     required this.color,
@@ -27,6 +28,7 @@ class LineStyle {
     this.fontStyle = FontStyle.normal,
     this.decoration = TextDecoration.none,
     this.prefixWidget, // 추가
+    this.leftPadding = 0.0, // 기본값
   });
 
   LineStyle copyWith({
@@ -37,16 +39,17 @@ class LineStyle {
     FontStyle? fontStyle,
     TextDecoration? decoration,
     Widget? prefixWidget,
+    double? leftPadding = 0.0,
   }) {
     return LineStyle(
-      color: color ?? this.color,
-      fontWeight: fontWeight ?? this.fontWeight,
-      fontSize: fontSize ?? this.fontSize,
-      fontFamily: fontFamily ?? this.fontFamily,
-      fontStyle: fontStyle ?? this.fontStyle,
-      decoration: decoration ?? this.decoration,
-      prefixWidget: prefixWidget ?? this.prefixWidget,
-    );
+        color: color ?? this.color,
+        fontWeight: fontWeight ?? this.fontWeight,
+        fontSize: fontSize ?? this.fontSize,
+        fontFamily: fontFamily ?? this.fontFamily,
+        fontStyle: fontStyle ?? this.fontStyle,
+        decoration: decoration ?? this.decoration,
+        prefixWidget: prefixWidget ?? this.prefixWidget,
+        leftPadding: leftPadding ?? this.leftPadding);
   }
 
   @override

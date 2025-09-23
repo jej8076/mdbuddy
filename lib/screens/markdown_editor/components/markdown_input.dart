@@ -94,7 +94,7 @@ class _LineStyledTextFieldState extends State<LineStyledTextField>
     }
     widget.onChanged!(widget.controller.text);
 
-    print("${widget.controller.text}");
+    // print("${widget.controller.text}");
 
     int removedChar = MarkdownProvider.processH(context, widget.controller);
     if (removedChar > 0) {
@@ -301,14 +301,14 @@ class _LineStyledTextFieldState extends State<LineStyledTextField>
   }
 
   // 현재 커서가 몇번째 줄에 있는 지 확인하는 함수
-  int getCursorRowIndex() {
-    if (_cursorPosition < 0 ||
-        _cursorPosition > widget.controller.text.length) {
+  int _getCursorRowIndex([int? newCursor]) {
+    int cursor = newCursor ?? _cursorPosition;
+    if (cursor < 0 || cursor > widget.controller.text.length) {
       return -1; // 유효하지 않은 커서 위치
     }
 
     int rowNumber = 0;
-    for (int i = 0; i < _cursorPosition; i++) {
+    for (int i = 0; i < cursor; i++) {
       if (widget.controller.text[i] == '\n') {
         rowNumber++;
       }
@@ -708,6 +708,7 @@ class LineStyleTextPainter extends CustomPainter {
     Offset? cursorOffset;
     double cursorHeight = 0;
     double originX = padding.left;
+    double changedX = originX;
 
     // 각 줄을 적절한 스타일로 그리기
     for (int i = 0; i < lines.length; i++) {
@@ -724,9 +725,11 @@ class LineStyleTextPainter extends CustomPainter {
       final lineStartIndex = runningLength;
       final lineEndIndex = runningLength + lineLength;
 
-      // 헤더 스타일인 경우 박스 위젯 추가
+      // 헤더 스타일인 경우 박스 위젯 추가하고 이동된 만큼의 위치를 반환
       double lineX =
           MarkdownPreboxProvider.drawHeaderBox(canvas, lineStyle, originX, y);
+
+      changedX = lineX;
 
       TextSpan currentLineSpan = TextSpan(
         text: line,
@@ -864,13 +867,14 @@ class LineStyleTextPainter extends CustomPainter {
       textPainter.layout();
 
       cursorOffset =
-          Offset(originX + textPainter.width, y - textPainter.height);
+          Offset(changedX + textPainter.width, y - textPainter.height);
 
       cursorHeight = lineStyle.fontSize;
     }
 
     // 커서 그리기
     if (hasFocus && showCursor && cursorOffset != null) {
+      print("cursorOffset: $cursorOffset");
       final paint = Paint()
         ..color = Colors.black
         ..strokeWidth = 2.0;
@@ -887,17 +891,5 @@ class LineStyleTextPainter extends CustomPainter {
         hasFocus != oldDelegate.hasFocus ||
         showCursor != oldDelegate.showCursor ||
         cursorPosition != oldDelegate.cursorPosition;
-  }
-
-  bool _isHeaderStyle(LineStyle style) {
-    return style.fontSize > 16 && style.fontWeight == FontWeight.bold;
-  }
-
-  String _getHeaderText(LineStyle style) {
-    if (style.fontSize >= 32) return "H1";
-    if (style.fontSize >= 28) return "H2";
-    if (style.fontSize >= 24) return "H3";
-    if (style.fontSize >= 20) return "H4";
-    return "H5";
   }
 }

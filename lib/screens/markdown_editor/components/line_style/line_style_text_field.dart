@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:mdbuddy/screens/markdown_editor/components/line_style/line_style_text_painter.dart';
+import 'package:mdbuddy/screens/markdown_editor/components/markdown/dto/process_h_response.dart';
 import 'package:mdbuddy/screens/markdown_editor/components/markdown/markdown_provider.dart';
 import 'package:mdbuddy/utils/HangulUtils.dart';
 import 'package:mdbuddy/utils/markdown_line_style_provider.dart';
@@ -51,7 +52,6 @@ class _LineStyleTextFieldState extends State<LineStyleTextField>
   bool _isShiftPressed = false;
   GlobalKey _canvasKey = GlobalKey();
   TextInputConnection? _textInputConnection;
-  TextEditingValue _currentValue = TextEditingValue.empty;
 
   @override
   void insertContent(KeyboardInsertedContent content) {}
@@ -98,17 +98,6 @@ class _LineStyleTextFieldState extends State<LineStyleTextField>
       return;
     }
     widget.onChanged!(widget.controller.text);
-
-    // print("${widget.controller.text}");
-
-    int removedChar = MarkdownProvider.processH(context, widget.controller);
-    if (removedChar > 0) {
-      int position = _cursorPosition - removedChar;
-      setState(() {
-        _cursorPosition = position;
-      });
-      _updateTextInputConnection(widget.controller.text, position);
-    }
   }
 
   void _startCursorBlink() {
@@ -151,15 +140,28 @@ class _LineStyleTextFieldState extends State<LineStyleTextField>
   // TextInputClient 인터페이스 구현
   @override
   void updateEditingValue(TextEditingValue value) {
-    _currentValue = value;
     final oldText = widget.controller.text;
-    final newText = value.text;
+    String newText = value.text;
+
+    ProcessHResponse processHResponse =
+        MarkdownProvider.processHnew(context, newText);
+    newText = processHResponse.text;
 
     if (oldText != newText) {
       widget.controller.text = newText;
+      final newCursorPosition =
+          (value.selection.baseOffset - processHResponse.removedChars)
+              .clamp(0, newText.length);
+
       setState(() {
-        _cursorPosition = value.selection.baseOffset;
+        _cursorPosition = newCursorPosition;
       });
+
+      // Flutter 입력 시스템에 변경사항 알림
+      // 조합 중이 아닐 때만 TextInputConnection 업데이트
+      if (!value.composing.isValid) {
+        _updateTextInputConnection(newText, _cursorPosition);
+      }
     }
   }
 
@@ -517,7 +519,8 @@ class _LineStyleTextFieldState extends State<LineStyleTextField>
       // 이동돼야할 라인의 커서 위치가 현재 커서 위치에서 벗어나면 이동될 문자열의 길이(맨 끝) 위치에 커서가 위치하도록 한다
       resultCursor = newLineStartIndex + newLineTextLength;
     } else {
-      resultCursor = newLineStartIndex + indexInLine;
+      int add = isMovingUp ? 0 : 1;
+      resultCursor = newLineStartIndex + (indexInLine == 0 ? add : indexInLine);
     }
 
     if (_isShiftPressed) {

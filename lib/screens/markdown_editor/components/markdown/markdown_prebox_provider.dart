@@ -2,6 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:mdbuddy/utils/markdown_line_style_provider.dart';
 
 class MarkdownPreboxProvider {
+  static const double boxWidth = 16;
+  static const double boxHeight = 16;
+  static const double boxPaddingRight = 25;
+
   static double drawHeaderBox(
       Canvas canvas, LineStyle lineStyle, double currentX, double y) {
     if (!_isHeaderStyle(lineStyle)) {
@@ -13,7 +17,7 @@ class MarkdownPreboxProvider {
       ..color = Colors.white
       ..style = PaintingStyle.fill;
 
-    final boxRect = Rect.fromLTWH(currentX, y, 40, 16);
+    final boxRect = Rect.fromLTWH(currentX, y, boxWidth, boxHeight);
     canvas.drawRect(boxRect, boxPaint);
 
     // 2. 박스 테두리 그리기
@@ -43,11 +47,11 @@ class MarkdownPreboxProvider {
     headerPainter.layout();
 
     // 박스 중앙에 텍스트 배치
-    final textX = currentX + (40 - headerPainter.width) / 2;
-    final textY = y + (16 - headerPainter.height) / 2;
+    final textX = currentX + (boxWidth - headerPainter.width) / 2;
+    final textY = y + (boxHeight - headerPainter.height) / 2;
     headerPainter.paint(canvas, Offset(textX, textY));
 
-    return currentX + 50; // 박스 너비 + 여백
+    return currentX + boxPaddingRight; // 박스 너비 + 여백
   }
 
   static bool _isHeaderStyle(LineStyle style) {

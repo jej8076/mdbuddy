@@ -12,6 +12,9 @@ class LineStyleTextField extends StatefulWidget {
   final TextEditingController controller;
   final List<LineStyle> lineStyles;
   final ValueChanged<String>? onChanged;
+  final VoidCallback? onNewLine;
+  final Function(int lineIndex, LineStyle lineStyle)? onStyleChange;
+  final ValueChanged<int>? onRemoveStyle;
   final int? maxLines;
   final String? hintText;
   final TextInputAction? textInputAction;
@@ -23,6 +26,9 @@ class LineStyleTextField extends StatefulWidget {
     required this.controller,
     required this.lineStyles,
     this.onChanged,
+    this.onNewLine,
+    this.onStyleChange,
+    this.onRemoveStyle,
     this.maxLines,
     this.hintText,
     this.textInputAction,
@@ -162,6 +168,7 @@ class _LineStyleTextFieldState extends State<LineStyleTextField>
     // 텍스트 입력 액션 처리 (예: done, next 등)
     if (action == TextInputAction.newline || action == TextInputAction.done) {
       _insertText('\n');
+      widget.onNewLine?.call();
     }
   }
 
@@ -340,6 +347,19 @@ class _LineStyleTextFieldState extends State<LineStyleTextField>
         _updateText(newText, _cursorPosition);
         return;
       }
+    }
+
+    final targetText = text[_cursorPosition - 1];
+    if (targetText == "\n") {
+      LineStyle lineStyle = _getCurrentLineStyle();
+      // 스타일이 normal이 아니면 스타일만 지우고 끝낸다
+      final currentLineIndex = _getCursorRowIndex();
+      if (lineStyle.getStyleType() != MarkdownLineStyles.normal) {
+        widget.onStyleChange?.call(currentLineIndex, LineStyleProvider.normal);
+        return;
+      }
+
+      widget.onRemoveStyle?.call(currentLineIndex);
     }
 
     // 일반 문자 삭제
@@ -556,6 +576,15 @@ class _LineStyleTextFieldState extends State<LineStyleTextField>
           previousNewlineIndex -
           1; // 이전 줄바꿈 이후부터 커서까지의 인덱스
     }
+  }
+
+  LineStyle _getCurrentLineStyle() {
+    final currentLineIndex = _getCursorRowIndex();
+    if (currentLineIndex >= 0 && currentLineIndex < widget.lineStyles.length) {
+      return widget.lineStyles[currentLineIndex];
+    }
+    // 인덱스가 범위를 벗어나면 모듈로 연산으로 순환
+    return widget.lineStyles[currentLineIndex % widget.lineStyles.length];
   }
 
   @override

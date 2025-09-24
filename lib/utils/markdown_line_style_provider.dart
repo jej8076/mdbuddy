@@ -52,6 +52,17 @@ class LineStyle {
         leftPadding: leftPadding ?? this.leftPadding);
   }
 
+  MarkdownLineStyles getStyleType() {
+    if (this == LineStyleProvider.normal) return MarkdownLineStyles.normal;
+    if (this == LineStyleProvider.h1) return MarkdownLineStyles.h1;
+    if (this == LineStyleProvider.h2) return MarkdownLineStyles.h2;
+    if (this == LineStyleProvider.h3) return MarkdownLineStyles.h3;
+    if (this == LineStyleProvider.h4) return MarkdownLineStyles.h4;
+    if (this == LineStyleProvider.h5) return MarkdownLineStyles.h5;
+    if (this == LineStyleProvider.code) return MarkdownLineStyles.code;
+    return MarkdownLineStyles.normal; // 기본값
+  }
+
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
@@ -128,6 +139,18 @@ class LineStyleProvider {
       default:
         return null;
     }
+  }
+
+  // LineStyle을 MarkdownLineStyles enum으로 변환
+  static MarkdownLineStyles getMarkdownLineStyleType(LineStyle style) {
+    if (style == normal) return MarkdownLineStyles.normal;
+    if (style == h1) return MarkdownLineStyles.h1;
+    if (style == h2) return MarkdownLineStyles.h2;
+    if (style == h3) return MarkdownLineStyles.h3;
+    if (style == h4) return MarkdownLineStyles.h4;
+    if (style == h5) return MarkdownLineStyles.h5;
+    if (style == code) return MarkdownLineStyles.code;
+    return MarkdownLineStyles.normal; // 기본값
   }
 
   // 모든 LineStyle 데이터를 List 형태로 반환하는 메서드 (선택 사항)

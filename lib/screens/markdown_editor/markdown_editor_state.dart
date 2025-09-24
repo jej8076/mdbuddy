@@ -93,6 +93,20 @@ class MarkdownEditorState extends State<MarkdownEditor> {
                       onChanged: (text) {
                         setState(() {});
                       },
+                      onStyleChange: (lineIndex, lineStyle) {
+                        setState(() {
+                          if (lineIndex < lineStyles.length) {
+                            lineStyles[lineIndex] = lineStyle;
+                          }
+                        });
+                      },
+                      onRemoveStyle: (lineIndex) {
+                        setState(() {
+                          if (lineIndex < lineStyles.length) {
+                            lineStyles.removeAt(lineIndex);
+                          }
+                        });
+                      },
                     ),
                   ),
                 ),

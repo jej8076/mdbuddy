@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:mdbuddy/bloc/markdown_line_style_bloc.dart';
+import 'package:mdbuddy/main.dart';
 import 'package:mdbuddy/screens/markdown_editor/martdown_editor_screen.dart';
+import 'package:mdbuddy/utils/key_handler.dart';
 import 'package:window_manager/window_manager.dart';
 
-import '../../main.dart';
-import '../../utils/key_handler.dart';
-import 'components/markdown_input.dart';
+import 'components/line_style/line_styled_text.dart';
 
 class MarkdownEditorState extends State<MarkdownEditor> {
   double _dragPosition = 100.0;

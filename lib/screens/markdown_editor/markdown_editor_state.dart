@@ -6,7 +6,7 @@ import 'package:mdbuddy/screens/markdown_editor/martdown_editor_screen.dart';
 import 'package:mdbuddy/utils/key_handler.dart';
 import 'package:window_manager/window_manager.dart';
 
-import 'components/line_style/line_styled_text.dart';
+import 'components/line_style/line_style_text_field.dart';
 
 class MarkdownEditorState extends State<MarkdownEditor> {
   double _dragPosition = 100.0;
@@ -87,7 +87,7 @@ class MarkdownEditorState extends State<MarkdownEditor> {
                   child: Padding(
                     padding: const EdgeInsets.fromLTRB(
                         32.0, 24.0, 32.0, 24.0), // 4방향 margin 추가
-                    child: LineStyledTextField(
+                    child: LineStyleTextField(
                       controller: _controller,
                       lineStyles: lineStyles,
                       onChanged: (text) {

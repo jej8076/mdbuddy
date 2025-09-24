@@ -2,13 +2,13 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:mdbuddy/screens/markdown_editor/components/line_style_text_painter.dart';
+import 'package:mdbuddy/screens/markdown_editor/components/line_style/line_style_text_painter.dart';
 import 'package:mdbuddy/screens/markdown_editor/components/markdown/markdown_provider.dart';
 import 'package:mdbuddy/utils/HangulUtils.dart';
 import 'package:mdbuddy/utils/markdown_line_style_provider.dart';
 import 'package:mdbuddy/utils/markdown_utils.dart';
 
-class LineStyledTextField extends StatefulWidget {
+class LineStyleTextField extends StatefulWidget {
   final TextEditingController controller;
   final List<LineStyle> lineStyles;
   final ValueChanged<String>? onChanged;
@@ -18,7 +18,7 @@ class LineStyledTextField extends StatefulWidget {
   final FocusNode? focusNode;
   final EdgeInsets padding;
 
-  const LineStyledTextField({
+  const LineStyleTextField({
     Key? key,
     required this.controller,
     required this.lineStyles,
@@ -31,10 +31,10 @@ class LineStyledTextField extends StatefulWidget {
   }) : super(key: key);
 
   @override
-  _LineStyledTextFieldState createState() => _LineStyledTextFieldState();
+  _LineStyleTextFieldState createState() => _LineStyleTextFieldState();
 }
 
-class _LineStyledTextFieldState extends State<LineStyledTextField>
+class _LineStyleTextFieldState extends State<LineStyleTextField>
     implements TextInputClient {
   late FocusNode _focusNode;
   bool _showCursor = false;

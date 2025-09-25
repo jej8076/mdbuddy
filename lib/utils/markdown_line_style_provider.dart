@@ -52,6 +52,22 @@ class LineStyle {
         leftPadding: leftPadding ?? this.leftPadding);
   }
 
+  static LineStyle defaultLineStyle({
+    Color? color,
+    FontWeight? fontWeight,
+    double? fontSize,
+    String? fontFamily,
+    FontStyle? fontStyle,
+    TextDecoration? decoration,
+    Widget? prefixWidget,
+    double? leftPadding = 0.0,
+  }) {
+    return LineStyle(
+        color: LineStyleProvider.normal.color,
+        fontWeight: LineStyleProvider.normal.fontWeight,
+        fontSize: LineStyleProvider.normal.fontSize);
+  }
+
   MarkdownLineStyles getStyleType() {
     if (this == LineStyleProvider.normal) return MarkdownLineStyles.normal;
     if (this == LineStyleProvider.h1) return MarkdownLineStyles.h1;

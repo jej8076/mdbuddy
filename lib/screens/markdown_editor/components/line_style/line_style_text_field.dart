@@ -15,7 +15,7 @@ class LineStyleTextField extends StatefulWidget {
   final TextEditingController controller;
   final List<LineStyle> lineStyles;
   final ValueChanged<String>? onChanged;
-  final VoidCallback? onNewLine;
+  final ValueChanged<int>? onNewLine;
   final Function(int lineIndex, LineStyle lineStyle)? onStyleChange;
   final ValueChanged<int>? onRemoveStyle;
   final int? maxLines;
@@ -199,8 +199,9 @@ class _LineStyleTextFieldState extends State<LineStyleTextField>
   void performAction(TextInputAction action) {
     // 텍스트 입력 액션 처리 (예: done, next 등)
     if (action == TextInputAction.newline || action == TextInputAction.done) {
+      final currentLineIndex = getCursorRowIndex();
       _insertText('\n');
-      widget.onNewLine?.call();
+      widget.onNewLine?.call(currentLineIndex + 1);
     }
   }
 

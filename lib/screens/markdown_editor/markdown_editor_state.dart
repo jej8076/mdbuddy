@@ -4,6 +4,7 @@ import 'package:mdbuddy/bloc/markdown_line_style_bloc.dart';
 import 'package:mdbuddy/main.dart';
 import 'package:mdbuddy/screens/markdown_editor/martdown_editor_screen.dart';
 import 'package:mdbuddy/utils/key_handler.dart';
+import 'package:mdbuddy/utils/markdown_line_style_provider.dart';
 import 'package:window_manager/window_manager.dart';
 
 import 'components/line_style/line_style_text_field.dart';
@@ -92,6 +93,14 @@ class MarkdownEditorState extends State<MarkdownEditor> {
                       lineStyles: lineStyles,
                       onChanged: (text) {
                         setState(() {});
+                      },
+                      onNewLine: (lineIndex) {
+                        context.read<MarkdownLineStyleBloc>().add(
+                              InsertLineStyleEvent(
+                                style: LineStyle.defaultLineStyle(),
+                                index: lineIndex,
+                              ),
+                            );
                       },
                       onStyleChange: (lineIndex, lineStyle) {
                         if (lineIndex < lineStyles.length) {

@@ -25,6 +25,20 @@ class AddLineStyleEvent extends MarkdownLineStyleEvent {
   List<Object> get props => [style, index];
 }
 
+// LineStyle을 특정 인덱스에 삽입하는 이벤트 (기존 스타일들을 뒤로 밀어냄)
+class InsertLineStyleEvent extends MarkdownLineStyleEvent {
+  final LineStyle style;
+  final int index;
+
+  const InsertLineStyleEvent({
+    required this.style,
+    required this.index
+  });
+
+  @override
+  List<Object> get props => [style, index];
+}
+
 // LineStyle을 제거하는 이벤트
 class RemoveLineStyleEvent extends MarkdownLineStyleEvent {
   final int index;
@@ -62,6 +76,7 @@ class MarkdownLineStyleState extends Equatable {
 class MarkdownLineStyleBloc extends Bloc<MarkdownLineStyleEvent, MarkdownLineStyleState> {
   MarkdownLineStyleBloc() : super(MarkdownLineStyleState.initial()) {
     on<AddLineStyleEvent>(_addLineStyle);
+    on<InsertLineStyleEvent>(_insertLineStyle);
     on<RemoveLineStyleEvent>(_removeLineStyle);
     on<ResetLineStylesEvent>(_resetLineStyles);
   }
@@ -91,6 +106,20 @@ class MarkdownLineStyleBloc extends Bloc<MarkdownLineStyleEvent, MarkdownLineSty
       updatedStyles[event.index] = event.style;
     }
 
+    emit(state.copyWith(lineStyles: updatedStyles));
+  }
+
+  void _insertLineStyle(InsertLineStyleEvent event, Emitter<MarkdownLineStyleState> emit) {
+    final updatedStyles = List<LineStyle>.from(state.lineStyles);
+    
+    if (event.index < 0) {
+      updatedStyles.insert(0, event.style);
+    } else if (event.index >= updatedStyles.length) {
+      updatedStyles.add(event.style);
+    } else {
+      updatedStyles.insert(event.index, event.style);
+    }
+    
     emit(state.copyWith(lineStyles: updatedStyles));
   }
 

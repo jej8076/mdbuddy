@@ -94,18 +94,18 @@ class MarkdownEditorState extends State<MarkdownEditor> {
                         setState(() {});
                       },
                       onStyleChange: (lineIndex, lineStyle) {
-                        setState(() {
-                          if (lineIndex < lineStyles.length) {
+                        if (lineIndex < lineStyles.length) {
+                          setState(() {
                             lineStyles[lineIndex] = lineStyle;
-                          }
-                        });
+                          });
+                        }
                       },
                       onRemoveStyle: (lineIndex) {
-                        setState(() {
-                          if (lineIndex < lineStyles.length) {
+                        if (lineIndex < lineStyles.length) {
+                          setState(() {
                             lineStyles.removeAt(lineIndex);
-                          }
-                        });
+                          });
+                        }
                       },
                     ),
                   ),

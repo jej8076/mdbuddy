@@ -14,6 +14,7 @@ class LineStyleTextPainter extends CustomPainter {
   final EdgeInsets padding;
   final int? selectionStart;
   final int? selectionEnd;
+  final int? cursorRowIndex;
 
   LineStyleTextPainter({
     required this.text,
@@ -25,46 +26,11 @@ class LineStyleTextPainter extends CustomPainter {
     this.padding = const EdgeInsets.all(8.0),
     this.selectionStart,
     this.selectionEnd,
+    this.cursorRowIndex,
   });
 
   @override
   void paint(Canvas canvas, Size size) {
-    if (text.isEmpty && hintText != null) {
-      // 힌트 텍스트 그리기
-      final textSpan = TextSpan(
-        text: hintText,
-        style: TextStyle(
-          color: Colors.grey.withOpacity(0.7),
-          fontSize: lineStyles.isNotEmpty ? lineStyles[0].fontSize : 16,
-        ),
-      );
-
-      final textPainter = TextPainter(
-        text: textSpan,
-        textDirection: TextDirection.ltr,
-      );
-
-      textPainter.layout(maxWidth: size.width - padding.horizontal);
-      textPainter.paint(canvas, Offset(padding.left, padding.top));
-
-      // 텍스트가 비어있고 포커스가 있을 때 커서 그리기
-      if (hasFocus && showCursor) {
-        final paint = Paint()
-          ..color = Colors.black
-          ..strokeWidth = 2.0;
-
-        canvas.drawLine(
-            Offset(padding.left, padding.top),
-            Offset(
-                padding.left,
-                padding.top +
-                    (lineStyles.isNotEmpty ? lineStyles[0].fontSize : 16)),
-            paint);
-      }
-
-      return;
-    }
-
     // 텍스트를 줄별로 분리
     final lines = text.split('\n');
 
@@ -93,9 +59,13 @@ class LineStyleTextPainter extends CustomPainter {
       final lineStartIndex = runningLength;
       final lineEndIndex = runningLength + lineLength;
 
+      double lineX = originX;
+
       // 헤더 스타일인 경우 박스 위젯 추가하고 이동된 만큼의 위치를 반환
-      double lineX =
-          MarkdownPreboxProvider.drawHeaderBox(canvas, lineStyle, originX, y);
+      if (cursorRowIndex == i) {
+        lineX =
+            MarkdownPreboxProvider.drawHeaderBox(canvas, lineStyle, originX, y);
+      }
 
       changedX = lineX;
 
@@ -242,7 +212,7 @@ class LineStyleTextPainter extends CustomPainter {
 
     // 커서 그리기
     if (hasFocus && showCursor && cursorOffset != null) {
-      print("cursorOffset: $cursorOffset");
+      // print("cursorOffset: $cursorOffset");
       final paint = Paint()
         ..color = Colors.black
         ..strokeWidth = 2.0;

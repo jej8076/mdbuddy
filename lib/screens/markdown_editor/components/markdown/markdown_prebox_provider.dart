@@ -5,6 +5,8 @@ class MarkdownPreboxProvider {
   static const double boxWidth = 16;
   static const double boxHeight = 16;
   static const double boxPaddingRight = 25;
+  static const double boxMarginLeft = 5.0;
+  static const double boxMarginTop = 5.0;
 
   static double drawHeaderBox(
       Canvas canvas, LineStyle lineStyle, double currentX, double y) {
@@ -12,21 +14,26 @@ class MarkdownPreboxProvider {
       return currentX;
     }
 
+    double boxX = currentX + boxMarginLeft;
+    double boxY = y + boxMarginTop;
+
+    final boxRect = Rect.fromLTWH(boxX, boxY, boxWidth, boxHeight);
+    final roundedRect = RRect.fromRectAndRadius(boxRect, Radius.circular(4.0));
+
     // 1. 박스 배경 그리기
     final boxPaint = Paint()
-      ..color = Colors.white
+      ..color = Colors.grey.shade100
       ..style = PaintingStyle.fill;
 
-    final boxRect = Rect.fromLTWH(currentX, y, boxWidth, boxHeight);
-    canvas.drawRect(boxRect, boxPaint);
+    canvas.drawRRect(roundedRect, boxPaint);
 
     // 2. 박스 테두리 그리기
     final borderPaint = Paint()
-      ..color = Colors.grey
+      ..color = Colors.grey.shade500
       ..style = PaintingStyle.stroke
       ..strokeWidth = 1.0;
 
-    canvas.drawRect(boxRect, borderPaint);
+    canvas.drawRRect(roundedRect, borderPaint);
 
     // 3. 박스 안에 헤더 텍스트 그리기
     final headerText = _getHeaderText(lineStyle);
@@ -34,8 +41,8 @@ class MarkdownPreboxProvider {
       text: headerText,
       style: TextStyle(
         fontSize: 10,
-        color: Colors.black,
-        fontWeight: FontWeight.bold,
+        color: Colors.grey.shade500,
+        fontWeight: FontWeight.normal,
       ),
     );
 
@@ -47,8 +54,8 @@ class MarkdownPreboxProvider {
     headerPainter.layout();
 
     // 박스 중앙에 텍스트 배치
-    final textX = currentX + (boxWidth - headerPainter.width) / 2;
-    final textY = y + (boxHeight - headerPainter.height) / 2;
+    final textX = boxX + (boxWidth - headerPainter.width) / 2;
+    final textY = boxY + (boxHeight - headerPainter.height) / 2;
     headerPainter.paint(canvas, Offset(textX, textY));
 
     return currentX + boxPaddingRight; // 박스 너비 + 여백

@@ -2,6 +2,8 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:mdbuddy/bloc/markdown_line_style_bloc.dart';
 import 'package:mdbuddy/screens/markdown_editor/components/line_style/line_style_text_painter.dart';
 import 'package:mdbuddy/screens/markdown_editor/components/markdown/dto/process_h_response.dart';
 import 'package:mdbuddy/screens/markdown_editor/components/markdown/markdown_provider.dart';
@@ -44,7 +46,7 @@ class LineStyleTextField extends StatefulWidget {
 class _LineStyleTextFieldState extends State<LineStyleTextField>
     implements TextInputClient {
   late FocusNode _focusNode;
-  bool _showCursor = false;
+  bool _showCursor = true;
   Timer? _cursorTimer;
   int _cursorPosition = 0;
   int? _selectionStart = 0;
@@ -66,6 +68,15 @@ class _LineStyleTextFieldState extends State<LineStyleTextField>
     _focusNode.addListener(_onFocusChange);
     widget.controller.addListener(_onTextChange);
     _startCursorBlink();
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      // 앱 시작 시 자동 포커스
+      _focusNode.requestFocus();
+      // 첫 라인에 기본 라인스타일 추가
+      BlocProvider.of<MarkdownLineStyleBloc>(context).add(
+        AddLineStyleEvent(style: LineStyle.defaultLineStyle(), index: 0),
+      );
+    });
   }
 
   @override
@@ -78,6 +89,22 @@ class _LineStyleTextFieldState extends State<LineStyleTextField>
     _cursorTimer?.cancel();
     _closeKeyboard();
     super.dispose();
+  }
+
+  // 현재 커서가 몇번째 줄에 있는 지 확인하는 함수
+  int getCursorRowIndex([int? newCursor]) {
+    int cursor = newCursor ?? _cursorPosition;
+    if (cursor < 0 || cursor > widget.controller.text.length) {
+      return -1; // 유효하지 않은 커서 위치
+    }
+
+    int rowNumber = 0;
+    for (int i = 0; i < cursor; i++) {
+      if (widget.controller.text[i] == '\n') {
+        rowNumber++;
+      }
+    }
+    return rowNumber;
   }
 
   void _onFocusChange() {
@@ -98,6 +125,9 @@ class _LineStyleTextFieldState extends State<LineStyleTextField>
       return;
     }
     widget.onChanged!(widget.controller.text);
+    setState(() {
+      _showCursor = true;
+    });
   }
 
   void _startCursorBlink() {
@@ -308,22 +338,6 @@ class _LineStyleTextFieldState extends State<LineStyleTextField>
     return text.length;
   }
 
-  // 현재 커서가 몇번째 줄에 있는 지 확인하는 함수
-  int _getCursorRowIndex([int? newCursor]) {
-    int cursor = newCursor ?? _cursorPosition;
-    if (cursor < 0 || cursor > widget.controller.text.length) {
-      return -1; // 유효하지 않은 커서 위치
-    }
-
-    int rowNumber = 0;
-    for (int i = 0; i < cursor; i++) {
-      if (widget.controller.text[i] == '\n') {
-        rowNumber++;
-      }
-    }
-    return rowNumber;
-  }
-
   void _handleBackspace() {
     if (widget.controller.text.isEmpty) return;
 
@@ -355,7 +369,7 @@ class _LineStyleTextFieldState extends State<LineStyleTextField>
     if (targetText == "\n") {
       LineStyle lineStyle = _getCurrentLineStyle();
       // 스타일이 normal이 아니면 스타일만 지우고 끝낸다
-      final currentLineIndex = _getCursorRowIndex();
+      final currentLineIndex = getCursorRowIndex();
       if (lineStyle.getStyleType() != MarkdownLineStyles.normal) {
         widget.onStyleChange?.call(currentLineIndex, LineStyleProvider.normal);
         return;
@@ -451,6 +465,7 @@ class _LineStyleTextFieldState extends State<LineStyleTextField>
       });
     } else {
       setState(() {
+        _showCursor = true;
         _cursorPosition += moveOffset;
         _selectionStart = null;
         _selectionEnd = null;
@@ -475,8 +490,9 @@ class _LineStyleTextFieldState extends State<LineStyleTextField>
 
     int newlineIndex = -1;
     if (isMovingUp) {
-      newlineIndex =
-          widget.controller.text.lastIndexOf('\n', _cursorPosition - 1);
+      newlineIndex = _cursorPosition == 0
+          ? -1
+          : widget.controller.text.lastIndexOf('\n', _cursorPosition - 1);
     } else {
       newlineIndex = widget.controller.text.indexOf('\n', _cursorPosition);
     }
@@ -506,22 +522,36 @@ class _LineStyleTextFieldState extends State<LineStyleTextField>
       newLineStartIndex++; // 줄바꿈 문자 다음부터 시작
     }
 
-    // 이동될 라인의 텍스트 길이
-    int newLineTextLength = MarkdownUtils.getLineLengthFromIndex(
+    // 목표 라인의 텍스트 길이 계산
+    int targetLineLength = MarkdownUtils.getLineLengthFromIndex(
         widget.controller.text, newLineStartIndex);
 
-    // 이동하기 전 커서의 위치의 라인안에서의 index
-    int indexInLine = findCursorIndexInLine();
+    // 현재 커서가 라인 내에서 몇 번째 위치에 있는지 계산
+    int currentPositionInLine = findCursorIndexInLine();
 
-    int resultCursor = 0;
+    // 새로운 커서 위치 계산
+    int newCursorPosition;
 
-    if (newLineTextLength < indexInLine) {
-      // 이동돼야할 라인의 커서 위치가 현재 커서 위치에서 벗어나면 이동될 문자열의 길이(맨 끝) 위치에 커서가 위치하도록 한다
-      resultCursor = newLineStartIndex + newLineTextLength;
+    if (targetLineLength < currentPositionInLine) {
+      // 목표 라인이 현재 위치보다 짧으면 라인 끝으로 이동
+      newCursorPosition = newLineStartIndex + targetLineLength;
     } else {
-      int add = isMovingUp ? 0 : 1;
-      resultCursor = newLineStartIndex + (indexInLine == 0 ? add : indexInLine);
+      // 목표 라인이 충분히 길면 같은 위치로 이동
+      if (currentPositionInLine == 0) {
+        if (targetLineLength == 0) {
+          // 라인 시작 위치에서는 방향에 따라 조정
+          int offset = isMovingUp ? 0 : 1;
+          newCursorPosition = newLineStartIndex + offset;
+        } else {
+          newCursorPosition = newLineStartIndex + currentPositionInLine;
+        }
+      } else {
+        // 일반적인 경우 같은 위치로 이동
+        newCursorPosition = newLineStartIndex + currentPositionInLine;
+      }
     }
+
+    int resultCursor = newCursorPosition;
 
     if (_isShiftPressed) {
       setState(() {
@@ -533,6 +563,7 @@ class _LineStyleTextFieldState extends State<LineStyleTextField>
       });
     } else {
       setState(() {
+        _showCursor = true;
         _cursorPosition = resultCursor;
         _selectionStart = null;
         _selectionEnd = null;
@@ -582,7 +613,7 @@ class _LineStyleTextFieldState extends State<LineStyleTextField>
   }
 
   LineStyle _getCurrentLineStyle() {
-    final currentLineIndex = _getCursorRowIndex();
+    final currentLineIndex = getCursorRowIndex();
     if (currentLineIndex >= 0 && currentLineIndex < widget.lineStyles.length) {
       return widget.lineStyles[currentLineIndex];
     }
@@ -653,7 +684,9 @@ class _LineStyleTextFieldState extends State<LineStyleTextField>
               padding: widget.padding,
               selectionStart: _selectionStart,
               // 선택 시작 위치 전달
-              selectionEnd: _selectionEnd, // 선택 끝 위치 전달
+              selectionEnd: _selectionEnd,
+              // 선택 끝 위치 전달
+              cursorRowIndex: getCursorRowIndex(),
             ),
             child: Container(
               width: double.infinity,

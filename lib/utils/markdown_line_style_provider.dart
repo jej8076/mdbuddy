@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:mdbuddy/constants/app_colors.dart';
+import 'package:mdbuddy/constants/fonts/app_fonts.dart';
 
 enum MarkdownLineStyles {
   normal,
@@ -52,20 +54,12 @@ class LineStyle {
         leftPadding: leftPadding ?? this.leftPadding);
   }
 
-  static LineStyle defaultLineStyle({
-    Color? color,
-    FontWeight? fontWeight,
-    double? fontSize,
-    String? fontFamily,
-    FontStyle? fontStyle,
-    TextDecoration? decoration,
-    Widget? prefixWidget,
-    double? leftPadding = 0.0,
-  }) {
+  static LineStyle defaultLineStyle() {
     return LineStyle(
         color: LineStyleProvider.normal.color,
         fontWeight: LineStyleProvider.normal.fontWeight,
-        fontSize: LineStyleProvider.normal.fontSize);
+        fontSize: LineStyleProvider.normal.fontSize,
+        fontFamily: LineStyleProvider.normal.fontFamily);
   }
 
   MarkdownLineStyles getStyleType() {
@@ -103,17 +97,35 @@ class LineStyle {
 
 class LineStyleProvider {
   static const LineStyle normal = LineStyle(
-      color: Colors.black, fontWeight: FontWeight.normal, fontSize: 16);
-  static const LineStyle h1 =
-      LineStyle(color: Colors.black, fontWeight: FontWeight.bold, fontSize: 32);
-  static const LineStyle h2 =
-      LineStyle(color: Colors.black, fontWeight: FontWeight.bold, fontSize: 28);
-  static const LineStyle h3 =
-      LineStyle(color: Colors.black, fontWeight: FontWeight.bold, fontSize: 24);
-  static const LineStyle h4 =
-      LineStyle(color: Colors.black, fontWeight: FontWeight.bold, fontSize: 20);
-  static const LineStyle h5 =
-      LineStyle(color: Colors.black, fontWeight: FontWeight.bold, fontSize: 16);
+      color: AppColors.textPrimary,
+      fontWeight: FontWeight.normal,
+      fontSize: 16,
+      fontFamily: AppFonts.CHOSUN_SG);
+  static const LineStyle h1 = LineStyle(
+      color: AppColors.textPrimary,
+      fontWeight: FontWeight.bold,
+      fontSize: 32,
+      fontFamily: AppFonts.CHOSUN_SG);
+  static const LineStyle h2 = LineStyle(
+      color: AppColors.textPrimary,
+      fontWeight: FontWeight.bold,
+      fontSize: 28,
+      fontFamily: AppFonts.CHOSUN_SG);
+  static const LineStyle h3 = LineStyle(
+      color: AppColors.textPrimary,
+      fontWeight: FontWeight.bold,
+      fontSize: 24,
+      fontFamily: AppFonts.CHOSUN_SG);
+  static const LineStyle h4 = LineStyle(
+      color: AppColors.textPrimary,
+      fontWeight: FontWeight.bold,
+      fontSize: 20,
+      fontFamily: AppFonts.CHOSUN_SG);
+  static const LineStyle h5 = LineStyle(
+      color: AppColors.textPrimary,
+      fontWeight: FontWeight.bold,
+      fontSize: 16,
+      fontFamily: AppFonts.CHOSUN_SG);
   static const LineStyle code = LineStyle(
       color: Colors.grey,
       fontWeight: FontWeight.w400,

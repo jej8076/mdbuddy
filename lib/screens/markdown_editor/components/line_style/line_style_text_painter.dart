@@ -1,6 +1,7 @@
 import 'dart:math';
 
 import 'package:flutter/material.dart';
+import 'package:mdbuddy/constants/app_colors.dart';
 import 'package:mdbuddy/constants/app_constants.dart';
 import 'package:mdbuddy/screens/markdown_editor/components/markdown/markdown_prebox_provider.dart';
 import 'package:mdbuddy/utils/markdown_line_style_provider.dart';
@@ -218,11 +219,18 @@ class LineStyleTextPainter extends CustomPainter {
     if (hasFocus && showCursor && cursorOffset != null) {
       // print("cursorOffset: $cursorOffset");
       final paint = Paint()
-        ..color = Colors.black
+        ..color = AppColors.siginature
         ..strokeWidth = 2.0;
 
-      canvas.drawLine(cursorOffset,
-          Offset(cursorOffset.dx, cursorOffset.dy + cursorHeight), paint);
+      canvas.drawLine(
+          Offset(cursorOffset.dx, cursorOffset.dy + AppConstants.cursorY),
+          Offset(
+              cursorOffset.dx,
+              cursorOffset.dy +
+                  cursorHeight +
+                  AppConstants.cursorAddSize +
+                  AppConstants.cursorY),
+          paint);
     }
   }
 

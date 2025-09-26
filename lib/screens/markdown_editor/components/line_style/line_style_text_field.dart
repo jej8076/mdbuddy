@@ -174,7 +174,7 @@ class _LineStyleTextFieldState extends State<LineStyleTextField>
     String newText = value.text;
 
     ProcessHResponse processHResponse =
-        MarkdownProvider.processHnew(context, newText);
+        MarkdownProvider.processH(context, newText);
     newText = processHResponse.text;
 
     if (oldText != newText) {

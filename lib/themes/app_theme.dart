@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:mdbuddy/constants/fonts/app_fonts.dart';
 
 class AppTheme {
   static ThemeData get lightTheme {
@@ -6,8 +7,10 @@ class AppTheme {
       primarySwatch: Colors.blue,
       brightness: Brightness.light,
       scaffoldBackgroundColor: Colors.white,
+      fontFamily: AppFonts.CHOSUN_SG,
       textTheme: TextTheme(
-        bodyMedium: TextStyle(fontSize: 16, color: Colors.black),
+        bodyMedium: TextStyle(
+            fontSize: 16, color: Colors.black, fontFamily: AppFonts.CHOSUN_SG),
       ),
     );
   }
@@ -17,8 +20,10 @@ class AppTheme {
       brightness: Brightness.dark,
       primarySwatch: Colors.deepPurple,
       scaffoldBackgroundColor: Colors.black,
+      fontFamily: AppFonts.CHOSUN_SG,
       textTheme: TextTheme(
-        bodyMedium: TextStyle(fontSize: 16, color: Colors.white),
+        bodyMedium: TextStyle(
+            fontSize: 16, color: Colors.white, fontFamily: AppFonts.CHOSUN_SG),
       ),
     );
   }

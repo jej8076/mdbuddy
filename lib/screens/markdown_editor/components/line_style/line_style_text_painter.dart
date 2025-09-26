@@ -1,6 +1,7 @@
 import 'dart:math';
 
 import 'package:flutter/material.dart';
+import 'package:mdbuddy/constants/app_constants.dart';
 import 'package:mdbuddy/screens/markdown_editor/components/markdown/markdown_prebox_provider.dart';
 import 'package:mdbuddy/utils/markdown_line_style_provider.dart';
 
@@ -101,7 +102,10 @@ class LineStyleTextPainter extends CustomPainter {
           final afterSelection = line.substring(selectionEndInLine);
 
           currentLineSpan = TextSpan(
-            style: TextStyle(fontSize: lineStyle.fontSize),
+            style: TextStyle(
+              fontSize: lineStyle.fontSize,
+              fontFamily: lineStyle.fontFamily,
+            ),
             children: <TextSpan>[
               TextSpan(
                 text: beforeSelection,
@@ -176,8 +180,8 @@ class LineStyleTextPainter extends CustomPainter {
         cursorHeight = lineStyle.fontSize;
       }
 
-      // 다음 줄 위치로 이동
-      y += textPainter.height;
+      // 다음 줄 위치로 이동 (라인 간격 추가)
+      y += textPainter.height + AppConstants.lineSpacing;
 
       // 이 줄 길이 추가
       runningLength += lineLength + 1; // +1 for newline character
